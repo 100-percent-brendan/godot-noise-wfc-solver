@@ -1,5 +1,5 @@
 class_name WFCGrid extends Node
-## A grid used when solving, storing and returning data from the [TileWFCSolver].
+## A grid used when solving, storing and returning data from a wave function collapse solver.
 ##
 ## Each cell in the grid represents a slot where a square tile can be placed.
 ## Where a solution is found, this can be used to populate a [TileMapLayer]
