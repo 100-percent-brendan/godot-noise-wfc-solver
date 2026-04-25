@@ -33,6 +33,18 @@ enum ComparisonDirection {
 }
 
 const MIN_SIZE : int = 6 ## The minimum size of the output grid in each dimension.
+## The [CellNeighbors] for the terrain layout, starting in the upper-left and
+## going clockwise around the border.
+const TERRAIN_LAYOUT_ORDER : Array[TileSet.CellNeighbor] = [
+	TileSet.CELL_NEIGHBOR_TOP_LEFT_CORNER,
+	TileSet.CELL_NEIGHBOR_TOP_SIDE,
+	TileSet.CELL_NEIGHBOR_TOP_RIGHT_CORNER,
+	TileSet.CELL_NEIGHBOR_RIGHT_SIDE,
+	TileSet.CELL_NEIGHBOR_BOTTOM_RIGHT_CORNER,
+	TileSet.CELL_NEIGHBOR_BOTTOM_SIDE,
+	TileSet.CELL_NEIGHBOR_BOTTOM_LEFT_CORNER,
+	TileSet.CELL_NEIGHBOR_LEFT_SIDE
+]
 
 var _debug_mode : bool = false ## Output debug messages and information.
 var _debug_delay : float = 0.0 ## Delay between tile placements and other major actions.
@@ -42,6 +54,7 @@ var _max_retries : int = 100 ## The maximum number of retry attempts.
 var _max_local_resets : int = 100 ## The maximum number of local resets.
 # TODO: Consider adding noise parameters
 var _tile_set : TileSet ## The tileset.
+var _tiles : Dictionary[Vector3i, Array] ## A tile mapping. The key is the source ID and atlas coords, and the value is terrain layout.
 # TODO: Add terrain list
 # TODO: Consider adding terrain weight
 # TODO: Determine what terrains border each other
@@ -52,11 +65,67 @@ var _tile_set : TileSet ## The tileset.
 ## It is expected that within the [param tile_set] all tiles will be
 ## one-tile-by-one-tile in size. Only tiles with terrain mappings will be
 ## used. Only the first terrain set encountered will be used.
-func _init(tile_set : TileSet, input_maps : Array[TileMapLayer]) -> void:
+func _init(tile_set : TileSet) -> void:
 	_tile_set = tile_set
-	# TODO: Confirm the tiles have appropriate terrain mappings
+	
 	# TODO: Load the tiles and terrain data
+	# TODO: Confirm the tiles have appropriate terrain mappings
 	# TODO: Determine terrain weight based on shape
+	_load_tile_data()
+
+## Load the tiles and terrain data from the tile set.
+##
+## This also verifies that the tile set is valid.
+func _load_tile_data():
+	if !_tile_set:
+		_print_debug_message("No tile set found.", DebugSeverity.ERROR)
+		return
+	
+	# Extract and index terrain data by tile
+	for i in range(_tile_set.get_source_count()):
+		var source_id : int = _tile_set.get_source_id(i)
+		var source: TileSetSource = _tile_set.get_source(source_id)
+
+		if source is TileSetAtlasSource:
+			for j in range(source.get_tiles_count()):
+				var atlas_coords = source.get_tile_id(j)
+				# TODO: Add message this does not support alternate tiles
+				var tile_data: TileData = source.get_tile_data(atlas_coords, 0)
+				
+				var layout := _get_terrain_layout(tile_data)
+				if layout.size() > 0:
+					_tiles[Vector3i(source_id, atlas_coords[0], atlas_coords[1])] = layout
+				else:
+					continue
+	
+	# TODO Organize tiles based on terrain shapes
+	
+	print(_tiles)
+
+## Extract terrain layout from the tile set.
+##
+## The terrain layout based on the [TERRAIN_LAYOUT_ORDER].
+##
+## Returns an empty array on data missing.
+func _get_terrain_layout(tile_data : TileData) -> Array[int]:
+	# TODO: Consider adding the center tile to the return
+	var layout : Array[int] = []
+	
+	# Iterate through all terrain tile segments on edge
+	# If any are not valid, return an empty array
+	# Otherwise, return the terrain data
+	for cell_neighbor : TileSet.CellNeighbor in TERRAIN_LAYOUT_ORDER:
+		if tile_data.is_valid_terrain_peering_bit(cell_neighbor):
+			var terrain : int = tile_data.get_terrain_peering_bit(cell_neighbor)
+			if terrain >= 0:
+				layout.push_back(terrain)
+			else:
+				return []
+		else:
+			return []
+	
+	return layout
+	
 
 ## Conditionally output a debug message at a given severity level.
 func _print_debug_message(message: String, severity : DebugSeverity) -> void:
