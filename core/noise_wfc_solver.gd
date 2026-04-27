@@ -54,8 +54,10 @@ var _max_retries : int = 100 ## The maximum number of retry attempts.
 var _max_local_resets : int = 100 ## The maximum number of local resets.
 # TODO: Consider adding noise parameters
 var _tile_set : TileSet ## The tileset.
-var _tiles : Dictionary[Vector3i, Array] ## A tile mapping. The key is the source ID and atlas coords, and the value is terrain layout.
-# TODO: Add terrain list
+var _tiles : Dictionary[Vector3i, Array] = {} ## A collection of tile-layout mappings. The key is the tile (source ID and atlas coords) and the value is the terrain layout.
+var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles by terrain identifier. The key is the terrain identifier and the value is an [Array] of tiles (source ID and atlas coords).
+var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
+var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
 # TODO: Consider adding terrain weight
 # TODO: Determine what terrains border each other
 # TODO: Define terrain gradient
@@ -92,15 +94,36 @@ func _load_tile_data():
 				# TODO: Add message this does not support alternate tiles
 				var tile_data: TileData = source.get_tile_data(atlas_coords, 0)
 				
-				var layout := _get_terrain_layout(tile_data)
+				var layout : Array[int] = _get_terrain_layout(tile_data)
 				if layout.size() > 0:
-					_tiles[Vector3i(source_id, atlas_coords[0], atlas_coords[1])] = layout
+					var tile : Vector3i = Vector3i(source_id, atlas_coords[0], atlas_coords[1])
+					
+					# Organize tiles by terrain
+					# TODO: Add check here to omit or include desired terrain types
+					for terrain in layout:
+						# Create terrain array if it does not exist
+						if !_terrain_tiles.has(terrain):
+							_terrain_tiles[terrain] = []
+						
+						# Put the tile into the array
+						if !_terrain_tiles[terrain].has(tile):
+							_terrain_tiles[terrain].push_back(tile)
+						
+					# Add to the collection of all tiles.
+					_tiles[tile] = layout
+					
+					# Build a collection of terrain layouts
+					# The key forms the basis of the layout groupings below
+					if !_terrain_layouts.has(layout):
+						_terrain_layouts.push_back(layout)
+					
+					# Organize tiles into layout groupings
+					var key = _terrain_layouts.find(layout)
+					if !_layout_tiles.has(key):
+						_layout_tiles[key] = []
+					_layout_tiles[key].push_back(tile)
 				else:
 					continue
-	
-	# TODO Organize tiles based on terrain shapes
-	
-	print(_tiles)
 
 ## Extract terrain layout from the tile set.
 ##
