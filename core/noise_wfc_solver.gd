@@ -54,10 +54,13 @@ var _max_retries : int = 100 ## The maximum number of retry attempts.
 var _max_local_resets : int = 100 ## The maximum number of local resets.
 # TODO: Consider adding noise parameters
 var _tile_set : TileSet ## The tileset.
+# TODO: Make sure all the below are used somewhere
 var _tiles : Dictionary[Vector3i, Array] = {} ## A collection of tile-layout mappings. The key is the tile (source ID and atlas coords) and the value is the terrain layout.
 var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by terrain identifier. The key is the terrain identifier and the value is an [Array] of tiles (source ID and atlas coords).
 var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
 var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
+var _terrain_edges : Array[Vector2i] = [] ## The edges between terrains.
+var _eulerian_terrain_path : Array[int] = [] ## The sequence to go over all terrains to ensure all edges are represented.
 # TODO: Consider adding terrain weight
 # TODO: Determine what terrains border each other
 # TODO: Define terrain gradient
@@ -78,7 +81,7 @@ func _init(tile_set : TileSet) -> void:
 ## Load the tiles and terrain data from the tile set.
 ##
 ## This also verifies that the tile set is valid.
-func _load_tile_data():
+func _load_tile_data() -> void:
 	if !_tile_set:
 		_print_debug_message("No tile set found.", DebugSeverity.ERROR)
 		return
@@ -96,6 +99,8 @@ func _load_tile_data():
 				var layout : Array[int] = _get_terrain_layout(tile_data)
 				var tile : Vector3i = Vector3i(source_id, atlas_coords[0], atlas_coords[1])
 				_index_tile(tile, layout)
+	
+	_find_terrain_eulerian()
 
 ## Extract terrain layout from the tile set.
 ##
@@ -124,12 +129,13 @@ func _get_terrain_layout(tile_data : TileData) -> Array[int]:
 ## Adds the tile to relevant indices.
 ##
 ## Provide the [param tile] (source ID and atlas coords) and the [param layout].
-func _index_tile(tile : Vector3i, layout : Array):
+func _index_tile(tile : Vector3i, layout : Array) -> void:
 	if !_tiles.has(tile) && layout.size() > 0:
-		# Add to the collection of all tiles.
+		# Add to the collection of all tiles
 		_tiles[tile] = layout
 		
 		# Organize tiles by terrain
+		var 	unique_terrains = []
 		# TODO: Add check here to omit or include desired terrain types
 		for terrain in layout:
 			# Create terrain array if it does not exist
@@ -139,6 +145,20 @@ func _index_tile(tile : Vector3i, layout : Array):
 			# Put the tile into the array
 			if !_terrain_tiles[terrain].has(tile):
 				_terrain_tiles[terrain].push_back(tile)
+			
+			# Extract unique terrains
+			if !unique_terrains.has(terrain):
+				unique_terrains.push_back(terrain)
+		
+		# Index the terrain edges
+		unique_terrains.sort()
+		for i in unique_terrains:
+			for j in unique_terrains:
+				# Check to make sure they are not equal and j is always larger than i for uniqueness
+				if i < j:
+					var edge : Vector2i = Vector2i(i, j)
+					if !_terrain_edges.has(edge):
+						_terrain_edges.push_back(edge)
 		
 		# Build a collection of terrain layouts
 		# The key forms the basis of the layout groupings below
@@ -150,6 +170,13 @@ func _index_tile(tile : Vector3i, layout : Array):
 		if !_layout_tiles.has(key):
 			_layout_tiles[key] = []
 		_layout_tiles[key].push_back(tile)
+
+## Find a eulerian path through terrain types.
+##
+## Use the terrain edges to calculate a eulerian path.
+func _find_terrain_eulerian():
+	# TODO: Setup function
+	pass
 
 ## Conditionally output a debug message at a given severity level.
 func _print_debug_message(message: String, severity : DebugSeverity) -> void:
@@ -180,7 +207,7 @@ func set_seed(prng_seed : int) -> void:
 ##
 ## Each cell represents a tile unit. Must be larger than the minimum size in
 ## each dimension.
-func set_dimensions(width : int, height : int):
+func set_dimensions(width : int, height : int) -> void:
 	_dimensions = Vector2i(maxi(width, MIN_SIZE), maxi(height, MIN_SIZE))
 
 ## Set the maximum number of retry attempts before the solver gives up.
