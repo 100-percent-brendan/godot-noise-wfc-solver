@@ -60,7 +60,7 @@ var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organi
 var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
 var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
 var _terrain_edges : Array[Vector2i] = [] ## The edges between terrains.
-var _eulerian_terrain_path : Array[int] = [] ## The sequence to go over all terrains to ensure all edges are represented.
+var _terrain_sequence : Array[int] = [] ## The sequence to go over all terrains to ensure all edges are represented.
 # TODO: Consider adding terrain weight
 # TODO: Determine what terrains border each other
 # TODO: Define terrain gradient
@@ -100,7 +100,7 @@ func _load_tile_data() -> void:
 				var tile : Vector3i = Vector3i(source_id, atlas_coords[0], atlas_coords[1])
 				_index_tile(tile, layout)
 	
-	_find_terrain_eulerian()
+	_find_terrain_sequence()
 
 ## Extract terrain layout from the tile set.
 ##
@@ -171,12 +171,12 @@ func _index_tile(tile : Vector3i, layout : Array) -> void:
 			_layout_tiles[key] = []
 		_layout_tiles[key].push_back(tile)
 
-## Find a eulerian path through terrain types.
+## Find an optimally-efficient path through terrain types.
 ##
-## Use the terrain edges to calculate a eulerian path.
-func _find_terrain_eulerian():
-	# TODO: Setup function
+## This acts as a solver to the route inspection problem (Chinese postman problem.)
+func _find_terrain_sequence() -> void:
 	pass
+	# TODO: Implement route inspect solver to find most efficient route
 
 ## Conditionally output a debug message at a given severity level.
 func _print_debug_message(message: String, severity : DebugSeverity) -> void:
