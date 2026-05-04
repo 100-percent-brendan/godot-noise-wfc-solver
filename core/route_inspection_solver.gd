@@ -6,11 +6,11 @@ class_name RouteInspectionSolver extends Node
 
 var _graph : Dictionary[int, Dictionary]
 
-## Check if a graph is fully connected.
+## Check if a graph is connected.
 ##
 ## This is a prerequisite of using the solver.
-static func is_fully_connected(graph : Dictionary[int, Dictionary]) -> bool:
-	# An empty graph is not 
+static func is_graph_connected(graph : Dictionary[int, Dictionary]) -> bool:
+	# An empty graph is connected
 	if graph.size() == 0:
 		return true
 	
@@ -34,13 +34,13 @@ static func is_fully_connected(graph : Dictionary[int, Dictionary]) -> bool:
 			if !graph.has(v):
 				return false
 			
-			if !visited.has(v):
+			if !visited[v]:
 				visited[v] = true
-				queue.append(v)
+				queue.push_back(v)
 	
-	# Check to see if all vertices have been visited, if not this graph is not fully connected
-	for v in graph.keys():
-		if !visited.has(v):
+	# Check to see if all vertices have been visited, if not this graph is not connected
+	for v in visited.keys():
+		if !visited[v]:
 			return false
 	
 	return true
@@ -49,17 +49,19 @@ static func is_fully_connected(graph : Dictionary[int, Dictionary]) -> bool:
 ##
 ## The [param graph] that is passed in must be a [Dictionary] indexed by
 ## vertex ID (integer) containing other [Dictionary] objects indexed with a list
-## of neighboring vertex IDs, containing a weight (cost to transit).
+## of neighboring vertex IDs with each value set to a weight. The [param graph]
+## must be connected, directed, and contain at least one vertex.
 ##
+## For example:
 ## [code]
 ## {
-##   1: [2: 5, 3: 1],
-##   2: [1: 5, 3: 2],
-##   3: [1: 1, 2: 2]
+##   1: {2: 5, 3: 1},
+##   2: {1: 5, 3: 2},
+##   3: {1: 1, 2: 2}
 ## }
 ## [/code]
 func _init(graph : Dictionary[int, Dictionary]):
-	if !graph:
+	if !graph && graph.size() > 0:
 		push_error("A graph must be supplied.")
 		return
 	
@@ -72,6 +74,10 @@ func _init(graph : Dictionary[int, Dictionary]):
 			if graph[i][j] < 0:
 				push_error("All weights must be positive or zero.")
 				return
+	
+	if !is_graph_connected(graph):
+		push_error("Graph must be connected.")
+		return
 	
 	_graph = graph
 

@@ -17,6 +17,16 @@ var label_map : Dictionary[Vector2i, Label]
 
 ## Run the solver when the test scene is ready.
 func _ready() -> void:
+	# TODO: Remove temporary test
+	var graph : Dictionary[int, Dictionary] = {
+		1: {2: 5, 3: 1},
+		2: {1: 5, 3: 2},
+		3: {1: 1, 2: 2}
+	}
+	graph = {4: {5: 1}, 5: {4: 1}}
+	var route_solver : RouteInspectionSolver = RouteInspectionSolver.new(graph)
+	return
+	
 	# Add labels that can be used to display tiles remaining and entropy
 	for x in GRID_WIDTH:
 		for y in GRID_HEIGHT:
