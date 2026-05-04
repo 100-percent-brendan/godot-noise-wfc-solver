@@ -14,7 +14,7 @@ static func is_graph_connected(graph : Dictionary[int, Dictionary]) -> bool:
 	if graph.size() == 0:
 		return true
 	
-	# Choose the first vertice
+	# Choose the first vertex
 	var start : int = graph.keys()[0]
 	
 	# Perform a simple breadth first search
@@ -45,12 +45,64 @@ static func is_graph_connected(graph : Dictionary[int, Dictionary]) -> bool:
 	
 	return true
 
+## Find the shortest path to all vertices in the graph.
+##
+## Internally, this uses Dijkstra's algorithm.
+##
+## Returns an [Array] where index 0 is a [Dictionary] that contains distances from
+## the source to a vertex, and index 1 is a [Dictionary] that contains the vertex indexed for
+## a previous hop towards the source. On no path found distance is INF and prev is null.
+static func find_shortest_paths(graph : Dictionary[int, Dictionary], source : int) -> Array:
+	if !graph.has(source):
+		push_error("Source must exist in graph.")
+		return [{}, {}]
+	
+	var dist : Dictionary = {}
+	var prev : Dictionary = {}
+	var visited : Dictionary = {}
+	
+	for v in graph:
+		dist[v] = INF
+		prev[v] = null
+		visited[v] = false
+	
+	dist[source] = 0
+	
+	# This is driven by a priority queue
+	# Initialize the queue with the source
+	var q : Array = []
+	q.push_back({"v": source, "dist": 0})
+	
+	while q.size() > 0:
+		# Get the item with minimum distance in the queue
+		q.sort_custom(func(a, b):
+			return a["dist"] < b["dist"]
+		)
+		var current = q.pop_front()
+		var u = current["v"]
+		
+		if visited[u]:
+			continue
+		visited[u] = true
+		
+		# Relax the edges (Update routing if a path is shorter)
+		for v in graph[u].keys():
+			var weight = graph[u][v]
+			var alt = dist[u] + weight
+			
+			if alt < dist[v]:
+				dist[v] = alt
+				prev[v] = u
+				q.push_back({"v": v, "dist": alt})
+		
+	return [dist, prev]
+
 ## Initialize the solver.
 ##
 ## The [param graph] that is passed in must be a [Dictionary] indexed by
 ## vertex ID (integer) containing other [Dictionary] objects indexed with a list
 ## of neighboring vertex IDs with each value set to a weight. The [param graph]
-## must be connected, directed, and contain at least one vertex.
+## must be connected, undirected, and contain at least one vertex.
 ##
 ## For example:
 ## [code]
@@ -91,7 +143,6 @@ func _get_odd_vertices() -> Array[int]:
 	
 	return verts
 
-## An implementation of Dijkstra's algorithm to ---
 ## TODO: Find shortest paths between every pair of odd vertices
 
 ## TODO: Minimum weight perfect matching
