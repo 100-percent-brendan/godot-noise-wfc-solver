@@ -225,16 +225,69 @@ func _get_edges() -> Array[Vector2i]:
 	
 	return edges
 
+## Find the Eulerian circuit.
+##
+## Use Hierholzer’s Algorithm to find the Eulerian circuit.
+##
+## Returns a list of vertices representing the circuit.
+func _find_eulerian_circuit(edges : Array[Vector2i]) -> Array[int]:
+	if !edges:
+		return []
+	
+	var circuit : Array[int] = []
+	var stack : Array[int] = [edges[0][0]]
+	
+	# Build adjacency index
+	var adj :  = {}
+	for edge in edges:
+		var u : int = edge[0]
+		var v : int = edge[1]
+		
+		if !adj.has(u):
+			adj[u] = []
+		if !adj.has(v):
+			adj[v] = []
+		
+		adj[u].push_back(v)
+		adj[v].push_back(u)
+	
+	# Explore the first vertex in the stack
+	# Find all neighbors to the vertex at that point point
+	# Once all neighbor are on the stack, put that vertex in the circuit
+	# Continue in this way on the next vertex and so forth, so that it draws loops
+	# Once the vertices are depleted, the pattern formed shall be an Eulerian circuit
+	while stack.size() > 0:
+		var v : int = stack[-1]
+		
+		if adj[v].size() > 0:
+			var u : int = adj[v].pop_back()
+			adj[u].erase(v)
+			stack.push_back(u)
+		else:
+			circuit.push_back(stack.pop_back())
+	
+	return circuit
+
 # TODO: Determine if the solver can be run more than once.
 # TODO: Update this comment
-## Run the solver to generate a Eulerian path.
-func run(): # TODO: Add return type
+## Run the solver to generate a Eulerian circuit.
+##
+## Internally, this solves the route inspection (Chinese postman)
+## problem.
+##
+## Returns a list of vertices representing the circuit.
+func run() -> Array[int]:
 	if !_graph:
 		push_error("A valid graph is required.")
-		return
+		return []
 	
+	# Find the odd vertices
 	var odd_verts : Array[int] = _get_odd_vertices()
+	
+	# Find the paths between the odd pairs
 	var odd_pair_paths : Dictionary = _find_shortest_odd_pair_paths(odd_verts)
+	
+	# Find the pairs that have the paths between them with the lowest cost (minimum weight)
 	var min_weight_pairs : Array = _find_min_weight_pairs(odd_verts, odd_pair_paths)
 	
 	# Duplicate edges along the matched shortest paths
@@ -249,6 +302,4 @@ func run(): # TODO: Add return type
 				edge = Vector2i(path[i + 1], path[i])
 			edges.push_back(edge)
 	
-	## TODO: Find the Eulerian circuit
-	# TODO: Hierholzer’s Algorithm
-	print(edges)
+	return _find_eulerian_circuit(edges)
