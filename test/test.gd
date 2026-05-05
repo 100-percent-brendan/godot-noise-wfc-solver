@@ -20,13 +20,15 @@ func _ready() -> void:
 	# TODO: Remove temporary test
 	var graph : Dictionary[int, Dictionary] = {
 		1: {2: 5, 3: 10},
-		2: {1: 5, 3: 2},
-		3: {1: 10, 2: 2, 4: 1},
+		2: {1: 5, 3: 4, 5: 1},
+		3: {1: 10, 2: 4, 4: 1},
 		4: {5: 1, 3: 1},
-		5: {4: 1}
+		5: {4: 1, 6: 2, 2: 1},
+		6: {5: 2, 7: 3},
+		7: {6: 3}
 	}
 	var route_solver : RouteInspectionSolver = RouteInspectionSolver.new(graph)
-	print(RouteInspectionSolver.find_shortest_paths(graph, 4))
+	print(route_solver._find_min_weight_pairs(route_solver._get_odd_vertices(), route_solver._find_shortest_odd_pair_matrix(route_solver._get_odd_vertices())))
 	return
 	
 	# Add labels that can be used to display tiles remaining and entropy

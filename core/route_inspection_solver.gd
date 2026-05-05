@@ -90,6 +90,7 @@ static func find_shortest_paths(graph : Dictionary[int, Dictionary], source : in
 			var weight = graph[u][v]
 			var alt = dist[u] + weight
 			
+			# Alternative path is shorter
 			if alt < dist[v]:
 				dist[v] = alt
 				prev[v] = u
@@ -135,7 +136,7 @@ func _init(graph : Dictionary[int, Dictionary]):
 
 ## Get an array of vertices from the graph with odd degree.
 func _get_odd_vertices() -> Array[int]:
-	var verts = []
+	var verts : Array[int] = []
 	
 	for v in _graph.keys():
 		if _graph[v].size() % 2 != 0:
@@ -143,9 +144,56 @@ func _get_odd_vertices() -> Array[int]:
 	
 	return verts
 
-## TODO: Find shortest paths between every pair of odd vertices
+## Find shortest paths between every pair of odd vertices.
+##
+## Returns a 2D matrix implemeneted using [Dictionary] objects, where the
+## contained value is distance between two vertices.
+func _find_shortest_odd_pair_matrix(odd_verts : Array[int]) -> Dictionary:
+	# TODO: Add safety somewhere to prevent directed graphs from being processed (uneven weight)
+	var m : Dictionary = {}
+	
+	# For each odd vertex pairing, create a matrix item representing distance
+	for u : int in odd_verts:
+		var dist : Dictionary = find_shortest_paths(_graph, u)[0]
+		m[u] = {}
+		for v in odd_verts:
+			if u != v:
+				m[u][v] = dist[v]
+	
+	return m
 
-## TODO: Minimum weight perfect matching
+## Perform minimum weight perfect matching.
+##
+## This finds the path between the odd pairs that is optimal (minimum weight).
+## This function is recursive.
+##
+## Returns the odd vertex pairings with the lowest path cost.
+func _find_min_weight_pairs(odd_verts : Array[int], odd_pair_dist : Dictionary) -> Array:
+	if odd_verts.size() == 0:
+		return []
+	
+	var u : int = odd_verts[0]
+	var lowest_cost = INF
+	var best_match = [] # A pair of vertices
+	
+	# Skip over 0 because that's where we start
+	for i in range(1, odd_verts.size()):
+		var v : int = odd_verts[i]
+		var rem = odd_verts.duplicate() # Remaining vertices to search
+		rem.erase(u)
+		rem.erase(v)
+		
+		# Recursively search for lowest cost pairings
+		var result : Array = _find_min_weight_pairs(rem, odd_pair_dist)
+		var cost : int = odd_pair_dist[u][v]
+		for j in result:
+			cost += odd_pair_dist[j[0]][j[1]]
+		
+		if cost < lowest_cost:
+			lowest_cost = cost
+			best_match = [[u, v]] + result
+	
+	return best_match
 
 ## TODO: Duplicate edges along the matched shortest paths
 
