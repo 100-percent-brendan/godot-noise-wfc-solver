@@ -146,19 +146,32 @@ func _get_odd_vertices() -> Array[int]:
 
 ## Find shortest paths between every pair of odd vertices.
 ##
-## Returns a 2D matrix implemeneted using [Dictionary] objects, where the
-## contained value is distance between two vertices.
-func _find_shortest_odd_pair_matrix(odd_verts : Array[int]) -> Dictionary:
+## Returns a 2D data structured composed of [Dictionary] objects, where the
+## contained value is an array containing the distance between two vertices and
+## the path.
+func _find_shortest_odd_pair_paths(odd_verts : Array[int]) -> Dictionary:
 	# TODO: Add safety somewhere to prevent directed graphs from being processed (uneven weight)
 	var m : Dictionary = {}
 	
-	# For each odd vertex pairing, create a matrix item representing distance
+	# For each odd vertex pairing, compose a distance and path array
 	for u : int in odd_verts:
-		var dist : Dictionary = find_shortest_paths(_graph, u)[0]
+		var shortest_paths := find_shortest_paths(_graph, u)
+		var dist : Dictionary = shortest_paths[0]
+		var prev : Dictionary = shortest_paths[1]
+		
 		m[u] = {}
 		for v in odd_verts:
 			if u != v:
-				m[u][v] = dist[v]
+				m[u][v] = []
+				m[u][v].push_back(dist[v])
+				
+				var path = []
+				var pv = v # The current path vertex
+				while pv != null:
+					path.push_front(pv)
+					pv = prev[pv]
+				
+				m[u][v].push_back(path)
 	
 	return m
 
@@ -168,7 +181,7 @@ func _find_shortest_odd_pair_matrix(odd_verts : Array[int]) -> Dictionary:
 ## This function is recursive.
 ##
 ## Returns the odd vertex pairings with the lowest path cost.
-func _find_min_weight_pairs(odd_verts : Array[int], odd_pair_dist : Dictionary) -> Array:
+func _find_min_weight_pairs(odd_verts : Array[int], odd_pair_paths : Dictionary) -> Array:
 	if odd_verts.size() == 0:
 		return []
 	
@@ -184,10 +197,10 @@ func _find_min_weight_pairs(odd_verts : Array[int], odd_pair_dist : Dictionary) 
 		rem.erase(v)
 		
 		# Recursively search for lowest cost pairings
-		var result : Array = _find_min_weight_pairs(rem, odd_pair_dist)
-		var cost : int = odd_pair_dist[u][v]
+		var result : Array = _find_min_weight_pairs(rem, odd_pair_paths)
+		var cost : int = odd_pair_paths[u][v][0]
 		for j in result:
-			cost += odd_pair_dist[j[0]][j[1]]
+			cost += odd_pair_paths[j[0]][j[1]][0]
 		
 		if cost < lowest_cost:
 			lowest_cost = cost
@@ -195,6 +208,47 @@ func _find_min_weight_pairs(odd_verts : Array[int], odd_pair_dist : Dictionary) 
 	
 	return best_match
 
-## TODO: Duplicate edges along the matched shortest paths
+## Get an edge collection.
+##
+## This is extracted from the graph.
+## Returns an array that contains edge endpoints as [Vector2i] (lowest index will be first).
+func _get_edges() -> Array[Vector2i]:
+	var edges : Array[Vector2i] = []
+	var visited : Array[Vector2i] = []
+	
+	for u : int in _graph:
+		for v : int in _graph[u]:
+			var edge : Vector2i = Vector2i(u, v)
+			if u < v && !visited.has(edge):
+				visited.push_back(edge)
+				edges.push_back(edge)
+	
+	return edges
 
-## TODO Find the Eulerian circuit
+# TODO: Determine if the solver can be run more than once.
+# TODO: Update this comment
+## Run the solver to generate a Eulerian path.
+func run(): # TODO: Add return type
+	if !_graph:
+		push_error("A valid graph is required.")
+		return
+	
+	var odd_verts : Array[int] = _get_odd_vertices()
+	var odd_pair_paths : Dictionary = _find_shortest_odd_pair_paths(odd_verts)
+	var min_weight_pairs : Array = _find_min_weight_pairs(odd_verts, odd_pair_paths)
+	
+	# Duplicate edges along the matched shortest paths
+	var edges : Array[Vector2i] = _get_edges()
+	for pair : Array in min_weight_pairs:
+		var path : Array = odd_pair_paths[pair[0]][pair[1]][1]
+		for i in range(path.size() - 1):
+			var edge : Vector2i
+			if path[i] < path[i + 1]:
+				edge = Vector2i(path[i], path[i + 1])
+			else:
+				edge = Vector2i(path[i + 1], path[i])
+			edges.push_back(edge)
+	
+	## TODO: Find the Eulerian circuit
+	# TODO: Hierholzer’s Algorithm
+	print(edges)

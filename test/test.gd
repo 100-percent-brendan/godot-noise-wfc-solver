@@ -28,7 +28,7 @@ func _ready() -> void:
 		7: {6: 3}
 	}
 	var route_solver : RouteInspectionSolver = RouteInspectionSolver.new(graph)
-	print(route_solver._find_min_weight_pairs(route_solver._get_odd_vertices(), route_solver._find_shortest_odd_pair_matrix(route_solver._get_odd_vertices())))
+	print(route_solver.run())
 	return
 	
 	# Add labels that can be used to display tiles remaining and entropy
