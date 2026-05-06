@@ -1,8 +1,10 @@
 class_name RouteInspectionSolver extends Node
 ## Solver for the route inspection problem.
 ##
-## Intended to find the most efficient path that includes all edges.
-# TODO: Review and update comments for accuracy
+## Intended to find the most efficient path that includes all edges in a
+## connected, undirected graph.
+##
+## See the initializer for the expected graph format.
 
 var _graph : Dictionary[int, Dictionary]
 
@@ -85,12 +87,12 @@ static func find_shortest_paths(graph : Dictionary[int, Dictionary], source : in
 			continue
 		visited[u] = true
 		
-		# Relax the edges (Update routing if a path is shorter)
+		# Relax the edges; update routing if a path is shorter
 		for v in graph[u].keys():
 			var weight = graph[u][v]
 			var alt = dist[u] + weight
 			
-			# Alternative path is shorter
+			# Alternative path is shorter; replace previous hop and weight
 			if alt < dist[v]:
 				dist[v] = alt
 				prev[v] = u
@@ -102,15 +104,19 @@ static func find_shortest_paths(graph : Dictionary[int, Dictionary], source : in
 ##
 ## The [param graph] that is passed in must be a [Dictionary] indexed by
 ## vertex ID (integer) containing other [Dictionary] objects indexed with a list
-## of neighboring vertex IDs with each value set to a weight. The [param graph]
+## of vertex IDs (neighbors) with each value set to a weight. The [param graph]
 ## must be connected, undirected, and contain at least one vertex.
 ##
 ## For example:
 ## [code]
 ## {
-##   1: {2: 5, 3: 1},
-##   2: {1: 5, 3: 2},
-##   3: {1: 1, 2: 2}
+##   1: {2: 5, 3: 10},
+##   2: {1: 5, 3: 4, 5: 1},
+##   3: {1: 10, 2: 4, 4: 1},
+##   4: {5: 1, 3: 1},
+##   5: {4: 1, 6: 2, 2: 1},
+##   6: {5: 2, 7: 3},
+##   7: {6: 3}
 ## }
 ## [/code]
 func _init(graph : Dictionary[int, Dictionary]):
@@ -118,14 +124,20 @@ func _init(graph : Dictionary[int, Dictionary]):
 		push_error("A graph must be supplied.")
 		return
 	
-	for i in graph:
-		for j in graph[i]:
-			if j is not int || graph[i][j] is not int:
+	for u in graph:
+		for v in graph[u]:
+			if v is not int || graph[u][v] is not int:
 				push_error("Both the key and the value in the neighbor dictionary must be integers.")
 				return
 			
-			if graph[i][j] < 0:
+			if graph[u][v] < 0:
 				push_error("All weights must be positive or zero.")
+				return
+	
+	for u in graph:
+		for v in graph[u]:
+			if !graph.has(v) || !graph[v].has(u) || graph[u][v] != graph[v][u]:
+				push_error("The graph must be undirected, with weights symmetric in both directions.")
 				return
 	
 	if !is_graph_connected(graph):
@@ -147,10 +159,9 @@ func _get_odd_vertices() -> Array[int]:
 ## Find shortest paths between every pair of odd vertices.
 ##
 ## Returns a 2D data structured composed of [Dictionary] objects, where the
-## contained value is an array containing the distance between two vertices and
+## contained value is an array composed of the distance between two vertices and
 ## the path.
 func _find_shortest_odd_pair_paths(odd_verts : Array[int]) -> Dictionary:
-	# TODO: Add safety somewhere to prevent directed graphs from being processed (uneven weight)
 	var m : Dictionary = {}
 	
 	# For each odd vertex pairing, compose a distance and path array
@@ -208,9 +219,8 @@ func _find_min_weight_pairs(odd_verts : Array[int], odd_pair_paths : Dictionary)
 	
 	return best_match
 
-## Get an edge collection.
+## Get an edge collection built from the graph.
 ##
-## This is extracted from the graph.
 ## Returns an array that contains edge endpoints as [Vector2i] (lowest index will be first).
 func _get_edges() -> Array[Vector2i]:
 	var edges : Array[Vector2i] = []
@@ -237,7 +247,7 @@ func _find_eulerian_circuit(edges : Array[Vector2i]) -> Array[int]:
 	var circuit : Array[int] = []
 	var stack : Array[int] = [edges[0][0]]
 	
-	# Build adjacency index
+	# Build an adjacency index
 	var adj :  = {}
 	for edge in edges:
 		var u : int = edge[0]
@@ -253,7 +263,7 @@ func _find_eulerian_circuit(edges : Array[Vector2i]) -> Array[int]:
 	
 	# Explore the first vertex in the stack
 	# Find all neighbors to the vertex at that point point
-	# Once all neighbor are on the stack, put that vertex in the circuit
+	# Once all neighbor are on the stack (and the current vertex has no neighbors), put that vertex in the circuit
 	# Continue in this way on the next vertex and so forth, so that it draws loops
 	# Once the vertices are depleted, the pattern formed shall be an Eulerian circuit
 	while stack.size() > 0:
@@ -268,9 +278,7 @@ func _find_eulerian_circuit(edges : Array[Vector2i]) -> Array[int]:
 	
 	return circuit
 
-# TODO: Determine if the solver can be run more than once.
-# TODO: Update this comment
-## Run the solver to generate a Eulerian circuit.
+## Run the solver to generate a Eulerian circuit from the graph.
 ##
 ## Internally, this solves the route inspection (Chinese postman)
 ## problem.
@@ -302,4 +310,5 @@ func run() -> Array[int]:
 				edge = Vector2i(path[i + 1], path[i])
 			edges.push_back(edge)
 	
+	# Find and return the Eulerian
 	return _find_eulerian_circuit(edges)
