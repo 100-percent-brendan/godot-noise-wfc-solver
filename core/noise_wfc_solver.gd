@@ -56,12 +56,12 @@ var _max_local_resets : int = 100 ## The maximum number of local resets.
 var _tile_set : TileSet ## The tileset.
 # TODO: Make sure all the below are used somewhere
 var _tiles : Dictionary[Vector3i, Array] = {} ## A collection of tile-layout mappings. The key is the tile (source ID and atlas coords) and the value is the terrain layout.
-var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by terrain identifier. The key is the terrain identifier and the value is an [Array] of tiles (source ID and atlas coords).
+var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by terrain index. The key is the terrain index and the value is an [Array] of tiles (source ID and atlas coords).
 var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
 var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
 var _terrain_edges : Array[Vector2i] = [] ## The edges between terrains.
 var _terrain_sequence : Array[int] = [] ## The most efficient sequence to go over all terrains to ensure all edges are represented.
-var _terrain_probability_distribution : Array = [] ## The distribution of probabilities for terrains, respecting sequencing. X is domain end and Y is terrain.
+var _terrain_probability_distribution : Array[Array] = [] ## The distribution of probabilities for terrains, respecting sequencing. X is domain end and Y is terrain index.
 # TODO: Consider adding terrain weight
 # TODO: Determine what terrains border each other
 # TODO: Define terrain gradient
@@ -214,7 +214,7 @@ func _build_terrain_probability_distribution() -> void:
 		counts[terrain] += 1
 	
 	var end : float = 0.0 # Current domain end
-	var distribution : Array = []
+	var distribution : Array[Array] = []
 	for terrain : int in _terrain_sequence:
 		# Adjust frequencies so terrains that appear more in the sequence are evened out
 		var weight : float = 1.0 / counts.size() / counts[terrain]
@@ -270,3 +270,18 @@ func set_max_retries(max_retries : int) -> void:
 ## This must be zero or above.
 func set_max_local_resets(max_local_resets : int) -> void:
 	_max_local_resets = maxi(max_local_resets, 1)
+
+## Get the terrain index from the probability distribution belonging to x.
+##
+## The [param x] parameters expects a value between 0 and 1.
+## Returns the terrain index or -1 on none found.
+func get_terrain_by_distribution(x : float) -> int:
+	for i : int in _terrain_probability_distribution.size():
+		var bottom : float = 0.0 # The floor
+		if i > 0:
+			bottom = _terrain_probability_distribution[i - 1][0]
+		var top : float = _terrain_probability_distribution[i][0]
+		if x >= bottom && x <= top:
+			return _terrain_probability_distribution[i][1]
+	
+	return -1
