@@ -117,6 +117,11 @@ func _get_terrain_layout(tile_data : TileData) -> Array[int]:
 	# TODO: Consider adding the center tile to the return
 	var layout : Array[int] = []
 	
+	# Ensure this is part of the correct terrain set
+	# Only the first set is used
+	if tile_data.terrain_set != 0:
+		return []
+	
 	# Iterate through all terrain tile segments on edge
 	# If any are not valid, return an empty array
 	# Otherwise, return the terrain data
