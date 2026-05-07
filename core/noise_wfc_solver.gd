@@ -60,7 +60,8 @@ var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organi
 var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
 var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
 var _terrain_edges : Array[Vector2i] = [] ## The edges between terrains.
-var _terrain_sequence : Array[int] = [] ## The sequence to go over all terrains to ensure all edges are represented.
+var _terrain_sequence : Array[int] = [] ## The most efficient sequence to go over all terrains to ensure all edges are represented.
+var _terrain_probability_distribution : Array = [] ## The distribution of probabilities for terrains, respecting sequencing. X is domain end and Y is terrain.
 # TODO: Consider adding terrain weight
 # TODO: Determine what terrains border each other
 # TODO: Define terrain gradient
@@ -73,10 +74,17 @@ var _terrain_sequence : Array[int] = [] ## The sequence to go over all terrains 
 func _init(tile_set : TileSet) -> void:
 	_tile_set = tile_set
 	
-	# TODO: Load the tiles and terrain data
 	# TODO: Confirm the tiles have appropriate terrain mappings
 	# TODO: Determine terrain weight based on shape
+	
+	# Load the tile and terrain data
 	_load_tile_data()
+	
+	# Find the optimal terrain sequence
+	_find_terrain_sequence()
+	
+	# Build a probability distribution from the terrain sequence
+	_build_terrain_probability_distribution()
 
 ## Load the tiles and terrain data from the tile set.
 ##
@@ -99,8 +107,6 @@ func _load_tile_data() -> void:
 				var layout : Array[int] = _get_terrain_layout(tile_data)
 				var tile : Vector3i = Vector3i(source_id, atlas_coords[0], atlas_coords[1])
 				_index_tile(tile, layout)
-	
-	_find_terrain_sequence()
 
 ## Extract terrain layout from the tile set.
 ##
@@ -175,8 +181,46 @@ func _index_tile(tile : Vector3i, layout : Array) -> void:
 ##
 ## This acts as a solver to the route inspection problem (Chinese postman problem.)
 func _find_terrain_sequence() -> void:
-	pass
-	# TODO: Implement route inspect solver to find most efficient route
+	var graph : Dictionary[int, Dictionary] = {}
+	for edge : Vector2i in _terrain_edges:
+		var u : int = edge[0]
+		var v : int = edge[1]
+		if !graph.has(u):
+			graph[u] = {}
+		if !graph.has(v):
+			graph[v] = {}
+		graph[u][v] = 1
+		graph[v][u] = 1
+	
+	_terrain_sequence =  RouteInspectionSolver.new(graph).run()
+
+## Build the terrain probability distribution, respecting sequencing.
+##
+## This is normalized between 0 and 1.
+## If a terrain appears multiple times, it will be adjusted to match the frequency of other terrains.
+##
+## X is the domain end (the highest) and Y is the terrain.
+func _build_terrain_probability_distribution() -> void:
+	# TODO Consider applying per-terrain frequencies; e.g. some terrains are more likely than others
+	var counts : Dictionary[int, int] = {}
+	for terrain : int in _terrain_sequence:
+		if !counts.has(terrain):
+			counts[terrain] = 0
+		counts[terrain] += 1
+	
+	var end : float = 0.0 # Current domain end
+	var distribution : Array = []
+	for terrain : int in _terrain_sequence:
+		# Adjust frequencies so terrains that appear more in the sequence are evened out
+		var weight : float = 1.0 / counts.size() / counts[terrain]
+		end += weight
+		distribution.push_back([end,terrain])
+	
+	# Set end of all domains to 1.0, to account for possible floating point errors
+	if distribution.size() > 0:
+		distribution[-1][0] = 1.0
+	
+	_terrain_probability_distribution = distribution
 
 ## Conditionally output a debug message at a given severity level.
 func _print_debug_message(message: String, severity : DebugSeverity) -> void:

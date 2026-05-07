@@ -29,7 +29,6 @@ func _ready() -> void:
 	}
 	var route_solver : RouteInspectionSolver = RouteInspectionSolver.new(graph)
 	print(route_solver.run())
-	return
 	
 	# Add labels that can be used to display tiles remaining and entropy
 	for x in GRID_WIDTH:
