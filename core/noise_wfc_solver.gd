@@ -56,6 +56,7 @@ var _max_local_resets : int = 100 ## The maximum number of local resets.
 var _tile_set : TileSet ## The tileset.
 # TODO: Make sure all the below are used somewhere
 var _tiles : Dictionary[Vector3i, Array] = {} ## A collection of tile-layout mappings. The key is the tile (source ID and atlas coords) and the value is the terrain layout.
+var _tile_weights : Dictionary[Vector3i, float] = {} ## A collection of tile probability weights for each tile (source ID and atlas coords).
 var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by terrain index. The key is the terrain index and the value is an [Array] of tiles (source ID and atlas coords).
 var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
 var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
@@ -79,6 +80,9 @@ func _init(tile_set : TileSet) -> void:
 	
 	# Load the tile and terrain data
 	_load_tile_data()
+	
+	# Build a set of probability weights for each tile
+	_build_tile_weights()
 	
 	# Find the optimal terrain sequence
 	_find_terrain_sequence()
@@ -181,6 +185,29 @@ func _index_tile(tile : Vector3i, layout : Array) -> void:
 		if !_layout_tiles.has(key):
 			_layout_tiles[key] = []
 		_layout_tiles[key].push_back(tile)
+
+## Build a set of tile probability weights.
+##
+## For each tile the weight will be calculated so:
+## - Multi-terrain (edge) tiles have lower probability than single terrain tiles.
+## - All tiles with the same layout have their probabilities divided by the amount of tiles in their layout group.
+func _build_tile_weights() -> void:
+	var weights : Dictionary[Vector3i, float] = {}
+	for i : int in _terrain_layouts.size():
+		var layout : Array = _terrain_layouts[i]
+		var is_edge : bool = false
+		for j : int in range(layout.size() - 1):
+			if layout[j] != layout [j + 1]:
+				is_edge = true
+		
+		var weight : float = 1.0
+		if is_edge:
+			weight = 1.0 / 40.0 # Edge pieces should be much less frequent, otherwise they dominate
+		weight = weight / _layout_tiles[i].size()
+		for tile : Vector3i in _layout_tiles[i]:
+			weights[tile] = weight
+	
+	_tile_weights = weights
 
 ## Find an optimally-efficient path through terrain types.
 ##
