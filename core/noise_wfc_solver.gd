@@ -33,6 +33,7 @@ enum ComparisonDirection {
 }
 
 const MIN_SIZE : int = 6 ## The minimum size of the output grid in each dimension.
+
 ## The [CellNeighbors] for the terrain layout, starting in the upper-left and
 ## going clockwise around the border.
 const TERRAIN_LAYOUT_ORDER : Array[TileSet.CellNeighbor] = [
@@ -60,12 +61,11 @@ var _tile_weights : Dictionary[Vector3i, float] = {} ## A collection of tile pro
 var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by terrain index. The key is the terrain index and the value is an [Array] of tiles (source ID and atlas coords).
 var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
 var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
+var _layout_neighbors : Dictionary[int, Dictionary] = {} ## A collection of tiles considered to be valid neighbors to another layout. The key is the terrain layout index and the value is collection (indexed by ComparisonDirection) of arrays of valid neighbor layout indices.
 var _terrain_edges : Array[Vector2i] = [] ## The edges between terrains.
 var _terrain_sequence : Array[int] = [] ## The most efficient sequence to go over all terrains to ensure all edges are represented.
-var _terrain_probability_distribution : Array[Array] = [] ## The distribution of probabilities for terrains, respecting sequencing. X is domain end and Y is terrain index.
-# TODO: Consider adding terrain weight
+var _terrain_distribution : Array[Array] = [] ## The distribution of probabilities for terrains, respecting sequencing. X is domain end and Y is terrain index.
 # TODO: Determine what terrains border each other
-# TODO: Define terrain gradient
 
 ## Initialize the wave function collapse solver.
 ##
@@ -84,11 +84,14 @@ func _init(tile_set : TileSet) -> void:
 	# Build a set of probability weights for each tile
 	_build_tile_weights()
 	
+	# Build an index of valid neighbors for each layout.
+	_index_terrain_layout_neighbors()
+	
 	# Find the optimal terrain sequence
 	_find_terrain_sequence()
 	
 	# Build a probability distribution from the terrain sequence
-	_build_terrain_probability_distribution()
+	_build_terrain_distribution()
 
 ## Load the tiles and terrain data from the tile set.
 ##
@@ -209,6 +212,69 @@ func _build_tile_weights() -> void:
 	
 	_tile_weights = weights
 
+## Compare terrain layouts to see if they can neighbor each other.
+##
+## This compares where layouts touch to see if they can be neighbors.
+func _can_terrain_layouts_neighbor(a : Array, b : Array, dir : ComparisonDirection) -> bool:
+	if a.size() != 8 || b.size() != 8:
+		return false
+	
+	# The TERRAIN_LAYOUT_ORDER is guaranteed to start in the top-left and go
+	# in a clockwise order. The windowing method below relies on that.
+	var base_offset = 0 # The offset of layout A
+	
+	match dir:
+		ComparisonDirection.BOTTOM_TO_TOP:
+			base_offset = 0
+		ComparisonDirection.LEFT_TO_RIGHT:
+			base_offset = 2
+		ComparisonDirection.TOP_TO_BOTTOM:
+			base_offset = 4
+		ComparisonDirection.RIGHT_TO_LEFT:
+			base_offset = 6
+		_:
+			return false
+	
+	# Get the row corresponding to the edge of layout A
+	# The follows the edge from the corner
+	var cells_a : Array = []
+	for i in 3:
+		cells_a.push_back(a[(base_offset + i) % 8])
+	
+	# Use an offset of 4 to get the opposing edge of layout B
+	# Then reverse it for easy comparison
+	var cells_b : Array = []
+	for i in 3:
+		cells_b.push_back(b[(base_offset + 4 + i) % 8])
+	cells_b.reverse()
+	
+	# Make sure the edges match (or don't not match)
+	for i in 3:
+		if cells_a[i] != cells_b[i]:
+			return false
+	
+	# If edges match, they can be neighbors
+	return true
+
+## Index the terrain layout neighbors.
+##
+## Identify what layouts can border each other.
+func _index_terrain_layout_neighbors() -> void:
+	var neighbors : Dictionary[int, Dictionary] = {}
+	
+	# Compare each layout edge to each other edge, and add layouts to the indices where they can neighbor
+	for i : int in _terrain_layouts.size():
+		neighbors[i] = {}
+		var a : Array = _terrain_layouts[i]
+		for dir : ComparisonDirection in ComparisonDirection.values():
+			neighbors[i][dir] = []
+			for j : int in _terrain_layouts.size():
+				var b : Array = _terrain_layouts[j]
+				if _can_terrain_layouts_neighbor(a, b, dir):
+					neighbors[i][dir].push_back(j)
+	
+	_layout_neighbors = neighbors
+
 ## Find an optimally-efficient path through terrain types.
 ##
 ## This acts as a solver to the route inspection problem (Chinese postman problem.)
@@ -232,7 +298,7 @@ func _find_terrain_sequence() -> void:
 ## If a terrain appears multiple times, it will be adjusted to match the frequency of other terrains.
 ##
 ## X is the domain end (the highest) and Y is the terrain.
-func _build_terrain_probability_distribution() -> void:
+func _build_terrain_distribution() -> void:
 	# TODO Consider applying per-terrain frequencies; e.g. some terrains are more likely than others
 	var counts : Dictionary[int, int] = {}
 	for terrain : int in _terrain_sequence:
@@ -252,7 +318,7 @@ func _build_terrain_probability_distribution() -> void:
 	if distribution.size() > 0:
 		distribution[-1][0] = 1.0
 	
-	_terrain_probability_distribution = distribution
+	_terrain_distribution = distribution
 
 ## Conditionally output a debug message at a given severity level.
 func _print_debug_message(message: String, severity : DebugSeverity) -> void:
@@ -303,12 +369,12 @@ func set_max_local_resets(max_local_resets : int) -> void:
 ## The [param x] parameters expects a value between 0 and 1.
 ## Returns the terrain index or -1 on none found.
 func get_terrain_by_distribution(x : float) -> int:
-	for i : int in _terrain_probability_distribution.size():
+	for i : int in _terrain_distribution.size():
 		var bottom : float = 0.0 # The floor
 		if i > 0:
-			bottom = _terrain_probability_distribution[i - 1][0]
-		var top : float = _terrain_probability_distribution[i][0]
+			bottom = _terrain_distribution[i - 1][0]
+		var top : float = _terrain_distribution[i][0]
 		if x >= bottom && x <= top:
-			return _terrain_probability_distribution[i][1]
+			return _terrain_distribution[i][1]
 	
 	return -1
