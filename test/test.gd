@@ -12,24 +12,10 @@ const RENDER_LABEL_TEXT : bool = false ## Whether or not to render label text. E
 @onready var tile_map_layer : TileMapLayer = $TileMapLayer ## A TileMapLayer to place tiles within.
 @onready var labels : Node2D = $Labels ## Labels used to render tiles remaining and entropy.
 
-var solver : NoiseWFCSolver ## The solver used for debugging.
 var label_map : Dictionary[Vector2i, Label]
 
 ## Run the solver when the test scene is ready.
 func _ready() -> void:
-	# TODO: Remove temporary test
-	var graph : Dictionary[int, Dictionary] = {
-		1: {2: 5, 3: 10},
-		2: {1: 5, 3: 4, 5: 1},
-		3: {1: 10, 2: 4, 4: 1},
-		4: {5: 1, 3: 1},
-		5: {4: 1, 6: 2, 2: 1},
-		6: {5: 2, 7: 3},
-		7: {6: 3}
-	}
-	var route_solver : RouteInspectionSolver = RouteInspectionSolver.new(graph)
-	print(route_solver.run())
-	
 	# Add labels that can be used to display tiles remaining and entropy
 	for x in GRID_WIDTH:
 		for y in GRID_HEIGHT:
@@ -43,7 +29,10 @@ func _ready() -> void:
 	
 	# Iterate over 100 instances of the WFC generation process
 	for i in range(100):
-		solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"))
+		var noise : FastNoiseLite = load("res://test/assets/noise.tres").duplicate()
+		noise.seed = i
+		var solver : NoiseWFCSolver ## The solver used for debugging.
+		solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise)
 		solver.set_seed(i)
 		solver.set_debug_mode(true)
 		solver.set_debug_delay(0.002)
@@ -52,6 +41,12 @@ func _ready() -> void:
 		solver.tile_removed.connect(_on_tile_removed)
 		solver.tile_possibilities_updated.connect(_on_tile_possibilities_updated)
 		solver.grid_reset.connect(_on_grid_reset)
+		
+		for x in GRID_WIDTH:
+			var row: Array[int] = []
+			for y in GRID_HEIGHT:
+				row.push_back(solver.get_default_terrain(x, y))
+			print(row)
 		
 		# var _grid := await solver.run() # TODO: Add this
 		

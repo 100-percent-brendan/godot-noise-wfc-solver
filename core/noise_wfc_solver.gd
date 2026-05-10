@@ -53,15 +53,16 @@ var _seed : int = 0 ## The seed used in the pseudorandom number generator (PRNG)
 var _dimensions : Vector2i = Vector2i(MIN_SIZE, MIN_SIZE) ## The dimensions of the output grid.
 var _max_retries : int = 100 ## The maximum number of retry attempts.
 var _max_local_resets : int = 100 ## The maximum number of local resets.
-# TODO: Consider adding noise parameters
 var _tile_set : TileSet ## The tileset.
+var _noise : Noise ## The noise generator.
+# TODO: Consider adding noise parameters
 # TODO: Make sure all the below are used somewhere
 var _tiles : Dictionary[Vector3i, Array] = {} ## A collection of tile-layout mappings. The key is the tile (source ID and atlas coords) and the value is the terrain layout.
 var _tile_weights : Dictionary[Vector3i, float] = {} ## A collection of tile probability weights for each tile (source ID and atlas coords).
 var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by terrain index. The key is the terrain index and the value is an [Array] of tiles (source ID and atlas coords).
 var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
 var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
-var _layout_neighbors : Dictionary[int, Dictionary] = {} ## A collection of tiles considered to be valid neighbors to another layout. The key is the terrain layout index and the value is collection (indexed by ComparisonDirection) of arrays of valid neighbor layout indices.
+var _layout_neighbors : Dictionary[int, Dictionary] = {} ## A collection of layouts considered to be valid neighbors to another layout. The key is the terrain layout index and the value is collection (indexed by ComparisonDirection) of arrays of valid neighbor layout indices.
 var _terrain_edges : Array[Vector2i] = [] ## The edges between terrains.
 var _terrain_sequence : Array[int] = [] ## The most efficient sequence to go over all terrains to ensure all edges are represented.
 var _terrain_distribution : Array[Array] = [] ## The distribution of probabilities for terrains, respecting sequencing. X is domain end and Y is terrain index.
@@ -72,11 +73,15 @@ var _terrain_distribution : Array[Array] = [] ## The distribution of probabiliti
 ## It is expected that within the [param tile_set] all tiles will be
 ## one-tile-by-one-tile in size. Only tiles with terrain mappings will be
 ## used. Only the first terrain set encountered will be used.
-func _init(tile_set : TileSet) -> void:
+##
+## The [param noise] can be set to any [Noise], but should have smooth transitions
+## and go through the full range, for best effect.
+func _init(tile_set : TileSet, noise : Noise) -> void:
 	_tile_set = tile_set
+	_noise = noise
 	
-	# TODO: Confirm the tiles have appropriate terrain mappings
-	# TODO: Determine terrain weight based on shape
+	if !_noise:
+		_print_debug_message("A valid noise generator must be provided.", DebugSeverity.ERROR)
 	
 	# Load the tile and terrain data
 	_load_tile_data()
@@ -367,6 +372,7 @@ func set_max_local_resets(max_local_resets : int) -> void:
 ## Get the terrain index from the probability distribution belonging to x.
 ##
 ## The [param x] parameters expects a value between 0 and 1.
+##
 ## Returns the terrain index or -1 on none found.
 func get_terrain_by_distribution(x : float) -> int:
 	for i : int in _terrain_distribution.size():
@@ -378,3 +384,15 @@ func get_terrain_by_distribution(x : float) -> int:
 			return _terrain_distribution[i][1]
 	
 	return -1
+
+## Get the default terrain by position.
+##
+## The terrain is determined by the noise function.
+##
+## Returns the terrain index or -1 on none found.
+func get_default_terrain(x : int, y : int) -> int:
+	if !_noise:
+		return -1
+	
+	var val : float = (_noise.get_noise_2d(x, y) / 2.0 + 0.5)
+	return get_terrain_by_distribution(clampf(val, 0.0, 1.0))
