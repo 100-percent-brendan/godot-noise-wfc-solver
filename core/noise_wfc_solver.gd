@@ -199,8 +199,9 @@ func _index_tile(tile : Vector3i, layout : Array) -> void:
 ## For each tile the weight will be calculated so:
 ## - Multi-terrain (edge) tiles have lower probability than single terrain tiles.
 ## - All tiles with the same layout have their probabilities divided by the amount of tiles in their layout group.
+## - Include weight from terrain set
 func _build_tile_weights() -> void:
-	# TODO: Include weights from terrain set
+	# TODO: Consider include weight bias for different types of terrains, based on input to class
 	var weights : Dictionary[Vector3i, float] = {}
 	for i : int in _terrain_layouts.size():
 		var layout : Array = _terrain_layouts[i]
@@ -209,11 +210,24 @@ func _build_tile_weights() -> void:
 			if layout[j] != layout [j + 1]:
 				is_edge = true
 		
-		var weight : float = 1.0
-		if is_edge:
-			weight = 1.0 / 40.0 # Edge pieces should be much less frequent, otherwise they dominate
-		weight = weight / _layout_tiles[i].size()
+		# Extract the weights of the matching tiles from the tile set
+		var tile_set_weights : Dictionary[Vector3i, float]
+		var total_tile_set_weight : float = 0.0
 		for tile : Vector3i in _layout_tiles[i]:
+			var source_id : int = _tile_set.get_source_id(tile.x)
+			var source: TileSetSource = _tile_set.get_source(source_id)
+			if source is TileSetAtlasSource:
+				var tile_data : TileData = source.get_tile_data(Vector2i(tile.y, tile.z), 0)
+				tile_set_weights[tile] = tile_data.probability
+				total_tile_set_weight += tile_data.probability
+		
+		var base_weight : float = 1.0
+		if is_edge:
+			base_weight = 1.0 / 40.0 # Edge pieces should be much less frequent, otherwise they dominate
+		
+		# Make sure each layout only take up a single tiles' worth of probability
+		for tile : Vector3i in _layout_tiles[i]:
+			var weight = base_weight * tile_set_weights[tile] / total_tile_set_weight
 			weights[tile] = weight
 	
 	_tile_weights = weights
@@ -415,7 +429,7 @@ func _place_tile(grid : WFCGrid, coords : Vector2i, tile : Vector3i) -> void:
 ##
 ## Returns the tile as source ID and atlas coords, or [code]Vector3i(-1, -1, -1)[/code] on error.
 func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
-	var total_weight : float
+	var total_weight : float = 0.0
 	
 	for tile in tiles:
 		total_weight += _tile_weights[tile]
@@ -423,7 +437,7 @@ func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
 	if total_weight <= 0:
 		return Vector3i(-1, -1, -1)
 	
-	var roll : float = randf() * total_weight
+	var roll : float = rand.randf() * total_weight
 	for tile : Vector3i in tiles:
 		var weight = _tile_weights[tile]
 		if roll <= weight:
