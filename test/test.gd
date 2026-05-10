@@ -42,13 +42,8 @@ func _ready() -> void:
 		solver.tile_possibilities_updated.connect(_on_tile_possibilities_updated)
 		solver.grid_reset.connect(_on_grid_reset)
 		
-		for x in GRID_WIDTH:
-			var row: Array[int] = []
-			for y in GRID_HEIGHT:
-				row.push_back(solver.get_default_terrain(x, y))
-			print(row)
-		
-		# var _grid := await solver.run() # TODO: Add this
+		#var _grid := await solver.run() # TODO: Add this
+		await solver.run() # TODO: Replace me with above
 		
 		# Wait 3 seconds after success
 		await get_tree().create_timer(3.0).timeout

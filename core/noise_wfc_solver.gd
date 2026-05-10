@@ -200,6 +200,7 @@ func _index_tile(tile : Vector3i, layout : Array) -> void:
 ## - Multi-terrain (edge) tiles have lower probability than single terrain tiles.
 ## - All tiles with the same layout have their probabilities divided by the amount of tiles in their layout group.
 func _build_tile_weights() -> void:
+	# TODO: Include weights from terrain set
 	var weights : Dictionary[Vector3i, float] = {}
 	for i : int in _terrain_layouts.size():
 		var layout : Array = _terrain_layouts[i]
@@ -374,7 +375,8 @@ func set_max_local_resets(max_local_resets : int) -> void:
 ## The [param x] parameters expects a value between 0 and 1.
 ##
 ## Returns the terrain index or -1 on none found.
-func get_terrain_by_distribution(x : float) -> int:
+func _get_terrain_by_distribution(x : float) -> int:
+	# TODO: Move into private section
 	for i : int in _terrain_distribution.size():
 		var bottom : float = 0.0 # The floor
 		if i > 0:
@@ -390,9 +392,99 @@ func get_terrain_by_distribution(x : float) -> int:
 ## The terrain is determined by the noise function.
 ##
 ## Returns the terrain index or -1 on none found.
-func get_default_terrain(x : int, y : int) -> int:
+func _get_default_terrain(coords : Vector2i) -> int:
+	# TODO: Move into private section
 	if !_noise:
 		return -1
 	
-	var val : float = (_noise.get_noise_2d(x, y) / 2.0 + 0.5)
-	return get_terrain_by_distribution(clampf(val, 0.0, 1.0))
+	var val : float = (_noise.get_noise_2d(coords.x, coords.y) / 2.0 + 0.5)
+	return _get_terrain_by_distribution(clampf(val, 0.0, 1.0))
+
+## Place tile in grid cell.
+##
+## This does not check if a placement is valid.
+func _place_tile(grid : WFCGrid, coords : Vector2i, tile : Vector3i) -> void:
+	# TODO: Move into private section
+	var cell = grid.get_cell(coords.x, coords.y)
+	cell.place_tile(tile)
+	tile_placed.emit(coords, tile.x, Vector2i(tile.y, tile.z))
+
+## Get random tile from array of tiles.
+##
+## This takes into account weights.
+##
+## Returns the tile as source ID and atlas coords, or [code]Vector3i(-1, -1, -1)[/code] on error.
+func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
+	var total_weight : float
+	
+	for tile in tiles:
+		total_weight += _tile_weights[tile]
+	
+	if total_weight <= 0:
+		return Vector3i(-1, -1, -1)
+	
+	var roll : float = randf() * total_weight
+	for tile : Vector3i in tiles:
+		var weight = _tile_weights[tile]
+		if roll <= weight:
+			return tile
+		roll -= weight
+	
+	return Vector3i(-1, -1, -1)
+
+# TODO: Add function to place tile then calculate neighbor entropy
+
+# TODO: Add function to calculate all open cell entropy
+
+# TODO: Create function to find possibilities for cell based on neighboring cells.
+
+# TODO: Create function for identify if cell contains invalid state.
+
+# TODO: Create function for calculating entropy for open cell
+
+# TODO: Phase 1: Set grid cells to solid terrain tiles based on noise
+## Place tiles in grid cells based on noise.
+##
+## This is intended to place cells, many of which will be invalid and will later be removed.
+func _place_default_tiles(rand : RandomNumberGenerator, grid : WFCGrid) -> void:
+	var dims : Vector2i = grid.get_dimensions()
+	for x : int in dims.x:
+		for y : int in dims.y:
+			var terrain : int = _get_default_terrain(Vector2i(x, y))
+			if terrain == -1:
+				continue
+			
+			# Find the terrain layout whose border is entirely the terrain
+			var layout : Array[int]
+			layout.resize(8)
+			layout.fill(terrain)
+			
+			# Locate the tiles that have that layout
+			var index = _terrain_layouts.find(layout)
+			if index == -1:
+				continue
+			var tiles : Array = _layout_tiles[index]
+			if tiles.size() == 0:
+				continue
+			
+			# Get a random tile to use as the default
+			var tile = _get_random_tile(rand, tiles)
+			if tile == Vector3i(-1, -1, -1):
+				continue
+			
+			_place_tile(grid, Vector2i(x, y), tile)
+
+# TODO: Phase 2: Invalidate then reset all cells that border tiles which they should not neighbor. Calculate entropy.
+
+# TODO: Phase 3: Run wave function collapse, with area resets, until a full grid is found.
+
+# TODO: Execute process from start to finish in run function
+
+# TODO: Document me
+# TODO: Add return
+func run() -> void:
+	var rand : RandomNumberGenerator = RandomNumberGenerator.new()
+	rand.seed = _seed
+	var grid : WFCGrid = WFCGrid.new(_dimensions.x, _dimensions.y)
+	
+	_place_default_tiles(rand, grid)

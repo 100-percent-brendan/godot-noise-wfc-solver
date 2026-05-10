@@ -1,32 +1,22 @@
 class_name WFCCell extends Node
 ## A grid cell within a [WFCGrid].
 ##
-## Each cell stores part of a solution state, such as what tiles may appear
-## in a cell, if the cell has been populated, etc.
+## Each cell stores part of a solution state, such as the Shannon entropy,
+## if the cell has been populated, etc.
 
 ## The status of this cell.
 enum Status {
 	OPEN, ## The cell is open for placing a tile in.
-	CLOSED ## The cell has a tile in it.
+	CLOSED, ## The cell has a tile in it.
+	INVALID ## The cell has a tile in it, and that tile has been marked invalid.
 }
 
 var _tile : Vector3i = Vector3i() ## The source ID followed by the atlas coordinates within the source.
-var _status : Status = Status.OPEN ## If the cell is populated or not.
-var _possibilities : Dictionary[Vector3i, float] = {} ## A collection of possible tiles with weights for this cell.
-var _total_weight : float = 0.0 ## The total weight of all possible tiles.
+var _status : Status = Status.OPEN ## The status of this cell.
 var _entropy : float = 0.0 ## The Shannon entropy.
 
-## Calculate the Shannon entropy.
-func _calculate_entropy() -> void:
-	if _status == Status.CLOSED || !has_possibilities():
-		_entropy = 0.0
-		return
-	
-	var entropy : float = 0.0
-	for i in _possibilities:
-		var prob = _possibilities[i] / _total_weight
-		entropy -= (prob * log(prob) / log(2))
-	
+## Set the Shannon entropy.
+func set_entropy(entropy : float) -> void:
 	_entropy = entropy
 
 ## Set cell to contain a tile.
@@ -35,7 +25,7 @@ func _calculate_entropy() -> void:
 func place_tile(tile : Vector3i) -> void:
 	_tile = tile
 	_status = Status.CLOSED
-	clear_possibilities()
+	_entropy = 0.0
 
 ## Get the tile.
 ##
@@ -52,40 +42,8 @@ func reset() -> void:
 func get_status() -> Status:
 	return _status
 
-## Set possibilities.
-##
-## This accepts a [Dictionary[Vector3i, float]] with the key being the tile (represented as a
-## source ID and atlas coordinates) and the value holding probability weights. For efficiency,
-## this will store a reference to the [Dictionary] object. If this is not desired,
-## duplicate the object before passing it in.
-func set_possibilites(possibilities : Dictionary[Vector3i, float]) -> void:
-	_possibilities = possibilities
-	_total_weight = 0.0
-	for i in _possibilities:
-		_total_weight += _possibilities[i]
-	_entropy = 0.0
-	_calculate_entropy()
-
-## Determines if there are any possibilities for this cell.
-##
-## Returns true on has possibilities, and false otherwise.
-func has_possibilities() -> bool:
-	return _possibilities && _possibilities.size() > 0
-
-## Clear the possible tiles that could go into this cell.
-func clear_possibilities() -> void:
-	_possibilities = {}
-	_total_weight = 0.0
-	_entropy = 0.0
-
 ## Get the entropy of the cell.
 ##
 ## This is the Shannon entropy of all tiles that could occupy the cell.
 func get_entropy() -> float:
 	return _entropy
-
-## Get the [Dictionary] of possibilities.
-##
-## This is a direct object reference, do not modify it.
-func get_possibilities() -> Dictionary[Vector3i, float]:
-	return _possibilities
