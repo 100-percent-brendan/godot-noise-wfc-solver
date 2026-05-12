@@ -11,6 +11,10 @@ const RENDER_LABEL_TEXT : bool = false ## Whether or not to render label text. E
 
 @onready var tile_map_layer : TileMapLayer = $TileMapLayer ## A TileMapLayer to place tiles within.
 @onready var labels : Node2D = $Labels ## Labels used to render tiles remaining and entropy.
+@onready var seed_input = $CanvasLayer/PanelContainer/VBoxContainer/SeedContainer/SeedInput
+@onready var run_button = $CanvasLayer/PanelContainer/VBoxContainer/RunContainer/RunButton
+
+var _is_running : bool = false
 
 var label_map : Dictionary[Vector2i, Label]
 
@@ -27,35 +31,49 @@ func _ready() -> void:
 			labels.add_child(label)
 			label_map[coords] = label
 	
-	# Iterate over 100 instances of the WFC generation process
-	for i in range(100):
-		var noise : FastNoiseLite = load("res://test/assets/noise.tres").duplicate()
-		noise.seed = i
-		var solver : NoiseWFCSolver ## The solver used for debugging.
-		solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise)
-		solver.set_seed(i)
-		solver.set_debug_mode(true)
-		solver.set_debug_delay(0.002)
-		solver.set_dimensions(GRID_WIDTH, GRID_HEIGHT)
-		solver.tile_placed.connect(_on_tile_placed)
-		solver.tile_removed.connect(_on_tile_removed)
-		solver.tile_possibilities_updated.connect(_on_tile_possibilities_updated)
-		solver.grid_reset.connect(_on_grid_reset)
-		
-		#var _grid := await solver.run() # TODO: Add this
-		await solver.run() # TODO: Replace me with above
-		
-		# Wait 3 seconds after success
-		await get_tree().create_timer(3.0).timeout
-		
-		# Clear tiles between runs
-		_clear_grid()
-		
-		# Disconnect previous signals
-		solver.tile_placed.disconnect(_on_tile_placed)
-		solver.tile_removed.disconnect(_on_tile_removed)
-		solver.tile_possibilities_updated.disconnect(_on_tile_possibilities_updated)
-		solver.grid_reset.disconnect(_on_grid_reset)
+	# Bind the run button
+	run_button.pressed.connect(_run_solver)
+
+## Start and run the solver.
+func _run_solver() -> void:
+	# Safety to prevent double run
+	if _is_running:
+		return
+	
+	# Clear tiles between runs
+	_clear_grid()
+	
+	# Enable double run protection and capture variables locally
+	_is_running = true
+	var seed = seed_input.value
+	
+	# Initialize the solver
+	var noise : FastNoiseLite = load("res://test/assets/noise.tres").duplicate()
+	noise.seed = seed
+	var solver : NoiseWFCSolver ## The solver used for debugging.
+	solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise)
+	solver.set_seed(seed)
+	solver.set_debug_mode(true)
+	solver.set_debug_delay(0.002)
+	solver.set_dimensions(GRID_WIDTH, GRID_HEIGHT)
+	
+	# Bind rendering signals
+	solver.tile_placed.connect(_on_tile_placed)
+	solver.tile_removed.connect(_on_tile_removed)
+	solver.tile_possibilities_updated.connect(_on_tile_possibilities_updated)
+	solver.grid_reset.connect(_on_grid_reset)
+	
+	# Run the solver
+	#var _grid := await solver.run() # TODO: Add this
+	await solver.run() # TODO: Replace me with above
+	
+	# Disconnect signals
+	solver.tile_placed.disconnect(_on_tile_placed)
+	solver.tile_removed.disconnect(_on_tile_removed)
+	solver.tile_possibilities_updated.disconnect(_on_tile_possibilities_updated)
+	solver.grid_reset.disconnect(_on_grid_reset)
+	
+	_is_running = false
 
 ## When a tile is placed in the solver, place it on the test [TileMapLayer].
 func _on_tile_placed(coords : Vector2i, source_id : int, atlas_coords : Vector2i) -> void:

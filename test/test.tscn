@@ -10,3 +10,36 @@ script = ExtResource("1_37kl0")
 tile_set = ExtResource("2_8a8pi")
 
 [node name="Labels" type="Node2D" parent="."]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_bottom = 40.0
+grow_horizontal = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/PanelContainer"]
+layout_mode = 2
+
+[node name="SeedContainer" type="HBoxContainer" parent="CanvasLayer/PanelContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="SeedLabel" type="Label" parent="CanvasLayer/PanelContainer/VBoxContainer/SeedContainer"]
+layout_mode = 2
+text = "Seed"
+
+[node name="SeedInput" type="SpinBox" parent="CanvasLayer/PanelContainer/VBoxContainer/SeedContainer"]
+layout_mode = 2
+max_value = 10000.0
+rounded = true
+allow_greater = true
+allow_lesser = true
+
+[node name="RunContainer" type="HBoxContainer" parent="CanvasLayer/PanelContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="RunButton" type="Button" parent="CanvasLayer/PanelContainer/VBoxContainer/RunContainer"]
+layout_mode = 2
