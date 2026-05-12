@@ -14,9 +14,9 @@ const RENDER_LABEL_TEXT : bool = false ## Whether or not to render label text. E
 @onready var seed_input = $CanvasLayer/PanelContainer/VBoxContainer/SeedContainer/SeedInput
 @onready var run_button = $CanvasLayer/PanelContainer/VBoxContainer/RunContainer/RunButton
 
-var _is_running : bool = false
+var _is_running : bool = false ## Double run protection.
 
-var label_map : Dictionary[Vector2i, Label]
+var label_map : Dictionary[Vector2i, Label] ## Map of which label applies to which cell.
 
 ## Run the solver when the test scene is ready.
 func _ready() -> void:
@@ -54,7 +54,7 @@ func _run_solver() -> void:
 	solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise)
 	solver.set_seed(seed)
 	solver.set_debug_mode(true)
-	solver.set_debug_delay(0.002)
+	solver.set_debug_delay(0.05)
 	solver.set_dimensions(GRID_WIDTH, GRID_HEIGHT)
 	
 	# Bind rendering signals

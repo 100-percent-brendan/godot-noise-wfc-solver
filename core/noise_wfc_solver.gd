@@ -352,6 +352,12 @@ func _print_debug_message(message: String, severity : DebugSeverity) -> void:
 			_:
 				print(message)
 
+## Apply a debug delay when in debug mode.
+func _wait_on_debug_delay():
+	if _debug_mode && _debug_delay >= 0.0:
+		print(_debug_delay)
+		await Engine.get_main_loop().create_timer(_debug_delay).timeout
+
 ## Set if the solver will output debug messages and information.
 func set_debug_mode(debug_mode : bool) -> void:
 	_debug_mode = debug_mode
@@ -587,8 +593,7 @@ func run() -> void:
 	var grid : WFCGrid = WFCGrid.new(_dimensions.x, _dimensions.y)
 	
 	_place_default_tiles(rand, grid)
-	# TODO: Add debug delay here
+	await _wait_on_debug_delay()
 	_mark_invalid_cells(grid)
-	# TODO: Add debug delay here
+	await _wait_on_debug_delay()
 	_reset_invalid_cells(grid)
-	# TODO: Add debug delay here
