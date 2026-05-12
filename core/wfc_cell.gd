@@ -47,3 +47,7 @@ func get_status() -> Status:
 ## This is the Shannon entropy of all tiles that could occupy the cell.
 func get_entropy() -> float:
 	return _entropy
+
+## Mark the cell as invalid.
+func mark_invalid() -> void:
+	_status = Status.INVALID

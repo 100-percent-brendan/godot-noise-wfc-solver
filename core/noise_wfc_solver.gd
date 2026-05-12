@@ -11,6 +11,7 @@ signal tile_placed(coords : Vector2i, source_id : int, atlas_coords : Vector2i)
 ## A signal for when a tile is removed.
 signal tile_removed(coords : Vector2i)
 
+# TODO: Replace me
 ## A signal for when tile possibilities are updated.
 signal tile_possibilities_updated(coords : Vector2i, count : int, entropy : float)
 
@@ -423,12 +424,20 @@ func _place_tile(grid : WFCGrid, coords : Vector2i, tile : Vector3i) -> void:
 	cell.place_tile(tile)
 	tile_placed.emit(coords, tile.x, Vector2i(tile.y, tile.z))
 
+## Remove tile and reset grid cell.
+func _remove_tile(grid : WFCGrid, coords : Vector2i) -> void:
+	# TODO: Move into private section
+	var cell = grid.get_cell(coords.x, coords.y)
+	cell.reset()
+	tile_removed.emit(coords)
+
 ## Get random tile from array of tiles.
 ##
 ## This takes into account weights.
 ##
 ## Returns the tile as source ID and atlas coords, or [code]Vector3i(-1, -1, -1)[/code] on error.
 func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
+	# TODO: Move into private section
 	var total_weight : float = 0.0
 	
 	for tile in tiles:
@@ -446,6 +455,56 @@ func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
 	
 	return Vector3i(-1, -1, -1)
 
+## If the tile is valid for a cell.
+##
+## Compares the tile to the current cell's neighbors to see if the tile can be
+## placed there. This also works to identify if a cell already in a tile is
+## valid.
+func _is_tile_placement_valid(grid : WFCGrid, coords : Vector2i, tile : Vector3i) -> bool:
+	# TODO: Move into private section
+	# TODO: This might need to be reversed
+	
+	# If this cell is open or invalid, skip checking as it is unnecessary
+	var status := grid.get_cell(coords.x, coords.y).get_status()
+	if status == WFCCell.Status.INVALID:
+		return false
+	if status == WFCCell.Status.OPEN:
+		return true
+	
+	# The directions are reversed here, as the comparison happens from the other cell
+	var neighbors : Dictionary[ComparisonDirection, WFCCell] = {}
+	neighbors[ComparisonDirection.LEFT_TO_RIGHT] = grid.get_cell(coords.x - 1, coords.y)
+	neighbors[ComparisonDirection.BOTTOM_TO_TOP] = grid.get_cell(coords.x, coords.y + 1)
+	neighbors[ComparisonDirection.RIGHT_TO_LEFT] = grid.get_cell(coords.x + 1, coords.y)
+	neighbors[ComparisonDirection.TOP_TO_BOTTOM] = grid.get_cell(coords.x, coords.y - 1)
+	
+	# The main tile layout
+	var layout : Array = _tiles[tile]
+	var layout_id : int = _terrain_layouts.find(layout)
+	
+	for dir : ComparisonDirection in neighbors:
+		var cell : WFCCell = neighbors[dir]
+		
+		# No neighbor cell means it is outside the grid
+		if !cell:
+			continue
+		
+		# No tile, means all tiles are possible
+		if cell.get_status() == WFCCell.Status.OPEN:
+			continue
+		
+		# Get the layout for the neighboring tile and load the array of layouts which can neighbor it
+		var neighbor_tile : Vector3i = cell.get_tile()
+		var neighbor_layout : Array = _tiles[neighbor_tile]
+		var neighbor_layout_id : int = _terrain_layouts.find(neighbor_layout)
+		var valid_layouts : Array = _layout_neighbors[neighbor_layout_id][dir]
+		
+		# If the layout for the tile is not found, then it is invalid
+		if valid_layouts.find(layout_id) == -1:
+			return false
+	
+	return true
+
 # TODO: Add function to place tile then calculate neighbor entropy
 
 # TODO: Add function to calculate all open cell entropy
@@ -461,6 +520,7 @@ func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
 ##
 ## This is intended to place cells, many of which will be invalid and will later be removed.
 func _place_default_tiles(rand : RandomNumberGenerator, grid : WFCGrid) -> void:
+	# TODO: Move into private section
 	var dims : Vector2i = grid.get_dimensions()
 	for x : int in dims.x:
 		for y : int in dims.y:
@@ -489,6 +549,31 @@ func _place_default_tiles(rand : RandomNumberGenerator, grid : WFCGrid) -> void:
 			_place_tile(grid, Vector2i(x, y), tile)
 
 # TODO: Phase 2: Invalidate then reset all cells that border tiles which they should not neighbor. Calculate entropy.
+## Invalidate any cells that should be.
+##
+## Goes through all cells in the grid and marks any that should be invalid.
+func _mark_invalid_cells(grid : WFCGrid):
+	# TODO: Move into private section
+	var dims : Vector2i = grid.get_dimensions()
+	for x : int in dims.x:
+		for y : int in dims.y:
+			var cell : WFCCell = grid.get_cell(x, y)
+			if cell.get_status() == WFCCell.Status.CLOSED:
+				if !_is_tile_placement_valid(grid, Vector2i(x, y), cell.get_tile()):
+					cell.mark_invalid()
+	# TODO: Trigger event to render this
+
+## Reset any invalid cells.
+##
+## Goes through all cells in the grid and resets any marked invalid.
+func _reset_invalid_cells(grid : WFCGrid):
+	# TODO: Move into private section
+	var dims : Vector2i = grid.get_dimensions()
+	for x : int in dims.x:
+		for y : int in dims.y:
+			var cell : WFCCell = grid.get_cell(x, y)
+			if cell.get_status() == WFCCell.Status.INVALID:
+				_remove_tile(grid, Vector2i(x, y))
 
 # TODO: Phase 3: Run wave function collapse, with area resets, until a full grid is found.
 
@@ -502,3 +587,8 @@ func run() -> void:
 	var grid : WFCGrid = WFCGrid.new(_dimensions.x, _dimensions.y)
 	
 	_place_default_tiles(rand, grid)
+	# TODO: Add debug delay here
+	_mark_invalid_cells(grid)
+	# TODO: Add debug delay here
+	_reset_invalid_cells(grid)
+	# TODO: Add debug delay here
