@@ -45,14 +45,14 @@ func _run_solver() -> void:
 	
 	# Enable double run protection and capture variables locally
 	_is_running = true
-	var seed = seed_input.value
+	var solver_seed = seed_input.value
 	
 	# Initialize the solver
 	var noise : FastNoiseLite = load("res://test/assets/noise.tres").duplicate()
-	noise.seed = seed
+	noise.seed = solver_seed
 	var solver : NoiseWFCSolver ## The solver used for debugging.
 	solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise)
-	solver.set_seed(seed)
+	solver.set_seed(solver_seed)
 	solver.set_debug_mode(true)
 	solver.set_debug_delay(0.05)
 	solver.set_dimensions(GRID_WIDTH, GRID_HEIGHT)
@@ -60,7 +60,7 @@ func _run_solver() -> void:
 	# Bind rendering signals
 	solver.tile_placed.connect(_on_tile_placed)
 	solver.tile_removed.connect(_on_tile_removed)
-	solver.tile_possibilities_updated.connect(_on_tile_possibilities_updated)
+	solver.cell_possibilities_updated.connect(_on_cell_possibilities_updated)
 	solver.grid_reset.connect(_on_grid_reset)
 	
 	# Run the solver
@@ -70,7 +70,7 @@ func _run_solver() -> void:
 	# Disconnect signals
 	solver.tile_placed.disconnect(_on_tile_placed)
 	solver.tile_removed.disconnect(_on_tile_removed)
-	solver.tile_possibilities_updated.disconnect(_on_tile_possibilities_updated)
+	solver.cell_possibilities_updated.disconnect(_on_cell_possibilities_updated)
 	solver.grid_reset.disconnect(_on_grid_reset)
 	
 	_is_running = false
@@ -85,7 +85,7 @@ func _on_tile_removed(coords : Vector2i) -> void:
 
 ## When the possibilities for a tile are updated in the solver, update the
 ## floating numbers above the [TileMapLayer].
-func _on_tile_possibilities_updated(coords : Vector2i, count : int, entropy : float) -> void:
+func _on_cell_possibilities_updated(coords : Vector2i, count : int, entropy : float) -> void:
 	if RENDER_LABEL_TEXT:
 		if label_map.has(coords):
 			label_map[Vector2i(coords)].text = "%d|%0.2f" % [count, entropy]

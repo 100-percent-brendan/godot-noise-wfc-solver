@@ -13,7 +13,7 @@ signal tile_removed(coords : Vector2i)
 
 # TODO: Replace me
 ## A signal for when tile possibilities are updated.
-signal tile_possibilities_updated(coords : Vector2i, count : int, entropy : float)
+signal cell_possibilities_updated(coords : Vector2i, count : int, entropy : float)
 
 ## A signal for when the grid is reset. 
 signal grid_reset()
@@ -355,7 +355,6 @@ func _print_debug_message(message: String, severity : DebugSeverity) -> void:
 ## Apply a debug delay when in debug mode.
 func _wait_on_debug_delay():
 	if _debug_mode && _debug_delay >= 0.0:
-		print(_debug_delay)
 		await Engine.get_main_loop().create_timer(_debug_delay).timeout
 
 ## Set if the solver will output debug messages and information.
@@ -461,6 +460,46 @@ func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
 	
 	return Vector3i(-1, -1, -1)
 
+## Get a list of valid tiles for a cell.
+##
+## Inquires the cell's neighbors to see what tiles are valid for a cell.
+func _get_valid_tiles(grid : WFCGrid, coords : Vector2i) -> Array[Vector3i]:
+	# The directions are reversed here, as the comparison happens from the other cell
+	var neighbors : Dictionary[ComparisonDirection, WFCCell] = {}
+	neighbors[ComparisonDirection.LEFT_TO_RIGHT] = grid.get_cell(coords.x - 1, coords.y)
+	neighbors[ComparisonDirection.BOTTOM_TO_TOP] = grid.get_cell(coords.x, coords.y + 1)
+	neighbors[ComparisonDirection.RIGHT_TO_LEFT] = grid.get_cell(coords.x + 1, coords.y)
+	neighbors[ComparisonDirection.TOP_TO_BOTTOM] = grid.get_cell(coords.x, coords.y - 1)
+	
+	var tiles : Array[Vector3i] = _tiles.keys().duplicate()
+	
+	for dir : ComparisonDirection in neighbors:
+		var cell : WFCCell = neighbors[dir]
+		
+		# No neighbor cell means it is outside the grid
+		if !cell:
+			continue
+		
+		# No tile, means all tiles are possible
+		if cell.get_status() == WFCCell.Status.OPEN:
+			continue
+		
+		# Get the layout for the neighboring tile and load the array of layouts which can neighbor it
+		var neighbor_tile : Vector3i = cell.get_tile()
+		var neighbor_layout : Array = _tiles[neighbor_tile]
+		var neighbor_layout_id : int = _terrain_layouts.find(neighbor_layout)
+		var valid_layouts : Array = _layout_neighbors[neighbor_layout_id][dir]
+		
+		# Remove tiles found to be invalid
+		var valid_tiles : Array = []
+		for layout in valid_layouts:
+			valid_tiles += _layout_tiles[layout]
+		tiles = tiles.filter(func(tile):
+			return valid_tiles.has(tile)
+		)
+	
+	return tiles
+
 ## If the tile is valid for a cell.
 ##
 ## Compares the tile to the current cell's neighbors to see if the tile can be
@@ -511,9 +550,35 @@ func _is_tile_placement_valid(grid : WFCGrid, coords : Vector2i, tile : Vector3i
 	
 	return true
 
-# TODO: Add function to place tile then calculate neighbor entropy
-
-# TODO: Add function to calculate all open cell entropy
+## Calculate entropy for cell.
+##
+## This calculates the Shannon entropy for a possibility space, saving it to the cell.
+func _calc_cell_entropy(grid : WFCGrid, coords : Vector2i) -> void:
+	# TODO: Move into private section
+	var cell : WFCCell = grid.get_cell(coords.x, coords.y)
+	if !cell:
+		return
+	
+	# If cell is already filled (whether valid or not), the entropy is 0.0
+	var status = cell.get_status()
+	if status == WFCCell.Status.CLOSED || status == WFCCell.Status.INVALID:
+		cell.set_entropy(0.0)
+		cell_possibilities_updated.emit(coords, 0, 0.0)
+		return
+	
+	# Load the possibility space (valid tiles) and calculate the total entropy based on weights
+	var total_weight : float = 0.0
+	var entropy : float = 0.0
+	var valid_tiles : Array[Vector3i] = _get_valid_tiles(grid, coords)
+	for tile : Vector3i in valid_tiles:
+		total_weight += _tile_weights[tile]
+	
+	for tile : Vector3i in valid_tiles:
+		var prob : float = _tile_weights[tile] / total_weight
+		entropy -= (prob * log(prob) / log(2))
+	
+	cell.set_entropy(entropy)
+	cell_possibilities_updated.emit(coords, valid_tiles.size(), entropy)
 
 # TODO: Create function to find possibilities for cell based on neighboring cells.
 
@@ -521,7 +586,6 @@ func _is_tile_placement_valid(grid : WFCGrid, coords : Vector2i, tile : Vector3i
 
 # TODO: Create function for calculating entropy for open cell
 
-# TODO: Phase 1: Set grid cells to solid terrain tiles based on noise
 ## Place tiles in grid cells based on noise.
 ##
 ## This is intended to place cells, many of which will be invalid and will later be removed.
@@ -554,7 +618,6 @@ func _place_default_tiles(rand : RandomNumberGenerator, grid : WFCGrid) -> void:
 			
 			_place_tile(grid, Vector2i(x, y), tile)
 
-# TODO: Phase 2: Invalidate then reset all cells that border tiles which they should not neighbor. Calculate entropy.
 ## Invalidate any cells that should be.
 ##
 ## Goes through all cells in the grid and marks any that should be invalid.
@@ -581,9 +644,15 @@ func _reset_invalid_cells(grid : WFCGrid):
 			if cell.get_status() == WFCCell.Status.INVALID:
 				_remove_tile(grid, Vector2i(x, y))
 
-# TODO: Phase 3: Run wave function collapse, with area resets, until a full grid is found.
-
-# TODO: Execute process from start to finish in run function
+## Calculate entropy for the entire grid.
+##
+## This calculates the Shannon entropy for every cell in the grid.
+func _calc_grid_entropy(grid : WFCGrid):
+	# TODO: Move into private section
+	var dims : Vector2i = grid.get_dimensions()
+	for x : int in dims.x:
+		for y : int in dims.y:
+			_calc_cell_entropy(grid, Vector2i(x, y))
 
 # TODO: Document me
 # TODO: Add return
@@ -592,8 +661,15 @@ func run() -> void:
 	rand.seed = _seed
 	var grid : WFCGrid = WFCGrid.new(_dimensions.x, _dimensions.y)
 	
+	# Phase 1: Set grid cells to solid terrain tiles based on noise
 	_place_default_tiles(rand, grid)
 	await _wait_on_debug_delay()
+	
+	# Phase 2: Invalidate then reset all cells that border tiles which they should not neighbor. Calculate entropy.
 	_mark_invalid_cells(grid)
 	await _wait_on_debug_delay()
 	_reset_invalid_cells(grid)
+	_calc_grid_entropy(grid)
+	await _wait_on_debug_delay()
+	
+	# TODO: Phase 3: Run wave function collapse, with local resets, until a full grid is found

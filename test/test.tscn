@@ -40,6 +40,8 @@ allow_lesser = true
 
 [node name="RunContainer" type="HBoxContainer" parent="CanvasLayer/PanelContainer/VBoxContainer"]
 layout_mode = 2
+alignment = 2
 
 [node name="RunButton" type="Button" parent="CanvasLayer/PanelContainer/VBoxContainer/RunContainer"]
 layout_mode = 2
+text = "Run"
