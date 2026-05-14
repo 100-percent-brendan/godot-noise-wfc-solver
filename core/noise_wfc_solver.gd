@@ -657,8 +657,8 @@ func _remove_tiles_around(grid : WFCGrid, coords : Vector2i, radius : int) -> Di
 	var cells_reset : Dictionary[Vector2i, WFCCell] = {}
 	radius = max(radius, 1)
 	
-	for x_offset : int in (radius + 1):
-		for y_offset : int in (radius + 1):
+	for x_offset : int in range(-radius, radius + 1):
+		for y_offset : int in range(-radius, radius + 1):
 			# Step over central tile
 			if x_offset == 0 && y_offset == 0:
 				continue
@@ -764,7 +764,7 @@ func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
 			if resets_remaining > 0:
 				# Try a local reset if there are any available
 				resets_remaining -= 1
-				var cells_updated : Dictionary[Vector2i, WFCCell] = _remove_tiles_around(grid, coords, 2)
+				var cells_updated : Dictionary[Vector2i, WFCCell] = _remove_tiles_around(grid, coords, 1)
 				queue.push_back([coords, cell])
 				for neighbor_coords : Vector2i in cells_updated:
 					var neighbor_cell : WFCCell = cells_updated[neighbor_coords]
