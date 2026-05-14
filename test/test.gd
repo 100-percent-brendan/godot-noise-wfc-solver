@@ -54,14 +54,13 @@ func _run_solver() -> void:
 	solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise)
 	solver.set_seed(solver_seed)
 	solver.set_debug_mode(true)
-	solver.set_debug_delay(0.05)
+	solver.set_debug_delay(0.0)
 	solver.set_dimensions(GRID_WIDTH, GRID_HEIGHT)
 	
 	# Bind rendering signals
 	solver.tile_placed.connect(_on_tile_placed)
 	solver.tile_removed.connect(_on_tile_removed)
 	solver.cell_possibilities_updated.connect(_on_cell_possibilities_updated)
-	solver.grid_reset.connect(_on_grid_reset)
 	
 	# Run the solver
 	#var _grid := await solver.run() # TODO: Add this
@@ -71,7 +70,6 @@ func _run_solver() -> void:
 	solver.tile_placed.disconnect(_on_tile_placed)
 	solver.tile_removed.disconnect(_on_tile_removed)
 	solver.cell_possibilities_updated.disconnect(_on_cell_possibilities_updated)
-	solver.grid_reset.disconnect(_on_grid_reset)
 	
 	_is_running = false
 
@@ -89,11 +87,6 @@ func _on_cell_possibilities_updated(coords : Vector2i, count : int, entropy : fl
 	if RENDER_LABEL_TEXT:
 		if label_map.has(coords):
 			label_map[Vector2i(coords)].text = "%d|%0.2f" % [count, entropy]
-			
-
-## When the grid is reset in the solver, clear the [TileMapLayer].
-func _on_grid_reset() -> void:
-	_clear_grid()
 
 ## Clear the grid.
 func _clear_grid() -> void:

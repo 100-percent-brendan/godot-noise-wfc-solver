@@ -15,9 +15,6 @@ signal tile_removed(coords : Vector2i)
 ## A signal for when tile possibilities are updated.
 signal cell_possibilities_updated(coords : Vector2i, count : int, entropy : float)
 
-## A signal for when the grid is reset. 
-signal grid_reset()
-
 ## The debug message severity.
 enum DebugSeverity {
 	INFORMATION, ## An informational message.
@@ -53,7 +50,7 @@ var _debug_delay : float = 0.0 ## Delay between tile placements and other major 
 var _seed : int = 0 ## The seed used in the pseudorandom number generator (PRNG).
 var _dimensions : Vector2i = Vector2i(MIN_SIZE, MIN_SIZE) ## The dimensions of the output grid.
 var _max_retries : int = 100 ## The maximum number of retry attempts.
-var _max_local_resets : int = 100 ## The maximum number of local resets.
+var _max_local_resets : int = 1000 ## The maximum number of local resets.
 var _tile_set : TileSet ## The tileset.
 var _noise : Noise ## The noise generator.
 # TODO: Consider adding noise parameters
@@ -224,7 +221,7 @@ func _build_tile_weights() -> void:
 		
 		var base_weight : float = 1.0
 		if is_edge:
-			base_weight = 1.0 / 40.0 # Edge pieces should be much less frequent, otherwise they dominate
+			base_weight = 1.0 / 80.0 # Edge pieces should be much less frequent, otherwise they dominate
 		
 		# Make sure each layout only take up a single tiles' worth of probability
 		for tile : Vector3i in _layout_tiles[i]:
@@ -354,7 +351,7 @@ func _print_debug_message(message: String, severity : DebugSeverity) -> void:
 
 ## Apply a debug delay when in debug mode.
 func _wait_on_debug_delay():
-	if _debug_mode && _debug_delay >= 0.0:
+	if _debug_mode && _debug_delay > 0.0:
 		await Engine.get_main_loop().create_timer(_debug_delay).timeout
 
 ## Set if the solver will output debug messages and information.
@@ -441,7 +438,7 @@ func _remove_tile(grid : WFCGrid, coords : Vector2i) -> void:
 ## This takes into account weights.
 ##
 ## Returns the tile as source ID and atlas coords, or [code]Vector3i(-1, -1, -1)[/code] on error.
-func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
+func _get_random_tile(rng : RandomNumberGenerator, tiles : Array) -> Vector3i:
 	# TODO: Move into private section
 	var total_weight : float = 0.0
 	
@@ -451,7 +448,7 @@ func _get_random_tile(rand : RandomNumberGenerator, tiles : Array) -> Vector3i:
 	if total_weight <= 0:
 		return Vector3i(-1, -1, -1)
 	
-	var roll : float = rand.randf() * total_weight
+	var roll : float = rng.randf() * total_weight
 	for tile : Vector3i in tiles:
 		var weight = _tile_weights[tile]
 		if roll <= weight:
@@ -562,7 +559,7 @@ func _calc_cell_entropy(grid : WFCGrid, coords : Vector2i) -> void:
 	# If cell is already filled (whether valid or not), the entropy is 0.0
 	var status = cell.get_status()
 	if status == WFCCell.Status.CLOSED || status == WFCCell.Status.INVALID:
-		cell.set_entropy(0.0)
+		cell.set_entropy(0.0, 0)
 		cell_possibilities_updated.emit(coords, 0, 0.0)
 		return
 	
@@ -577,19 +574,25 @@ func _calc_cell_entropy(grid : WFCGrid, coords : Vector2i) -> void:
 		var prob : float = _tile_weights[tile] / total_weight
 		entropy -= (prob * log(prob) / log(2))
 	
-	cell.set_entropy(entropy)
+	cell.set_entropy(entropy, valid_tiles.size())
 	cell_possibilities_updated.emit(coords, valid_tiles.size(), entropy)
 
-# TODO: Create function to find possibilities for cell based on neighboring cells.
-
-# TODO: Create function for identify if cell contains invalid state.
-
-# TODO: Create function for calculating entropy for open cell
+## Calculate entropy for cell and its neighbors.
+##
+## This calculates the Shannon entropy for a possibility space, for the cell
+## and the neighbors touching it above, below, to the right, and left.
+func _calc_cell_neighborhood_entropy(grid : WFCGrid, coords : Vector2i):
+	# TODO: Move into private section
+	_calc_cell_entropy(grid, coords)
+	_calc_cell_entropy(grid, Vector2i(coords.x - 1, coords.y))
+	_calc_cell_entropy(grid, Vector2i(coords.x + 1, coords.y))
+	_calc_cell_entropy(grid, Vector2i(coords.x, coords.y - 1))
+	_calc_cell_entropy(grid, Vector2i(coords.x, coords.y + 1))
 
 ## Place tiles in grid cells based on noise.
 ##
 ## This is intended to place cells, many of which will be invalid and will later be removed.
-func _place_default_tiles(rand : RandomNumberGenerator, grid : WFCGrid) -> void:
+func _place_default_tiles(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
 	# TODO: Move into private section
 	var dims : Vector2i = grid.get_dimensions()
 	for x : int in dims.x:
@@ -612,7 +615,7 @@ func _place_default_tiles(rand : RandomNumberGenerator, grid : WFCGrid) -> void:
 				continue
 			
 			# Get a random tile to use as the default
-			var tile = _get_random_tile(rand, tiles)
+			var tile = _get_random_tile(rng, tiles)
 			if tile == Vector3i(-1, -1, -1):
 				continue
 			
@@ -644,6 +647,52 @@ func _reset_invalid_cells(grid : WFCGrid):
 			if cell.get_status() == WFCCell.Status.INVALID:
 				_remove_tile(grid, Vector2i(x, y))
 
+## Remove tiles from cells around a point.
+##
+## Does not remove at the center.
+##
+## Returns any cells, indexed by coordinates, that had tile removed.
+func _remove_tiles_around(grid : WFCGrid, coords : Vector2i, radius : int) -> Dictionary[Vector2i, WFCCell]:
+	# TODO: Move into private section
+	var cells_reset : Dictionary[Vector2i, WFCCell] = {}
+	radius = max(radius, 1)
+	
+	for x_offset : int in (radius + 1):
+		for y_offset : int in (radius + 1):
+			# Step over central tile
+			if x_offset == 0 && y_offset == 0:
+				continue
+			
+			var x = coords.x + x_offset
+			var y = coords.y + y_offset
+			
+			var cell = grid.get_cell(x, y)
+			
+			# If the coordinates are outside the grid, step over
+			if !cell:
+				continue
+			
+			# Step over any cells that are open
+			if cell.get_status() == WFCCell.Status.OPEN:
+				continue
+			
+			# Remove the tile and calculate entropy
+			var target : Vector2i = Vector2i(x, y)
+			_remove_tile(grid, target)
+			_calc_cell_neighborhood_entropy(grid, target)
+			cells_reset[target] = cell
+	
+	return cells_reset
+
+## Place a random tile into a cell.
+##
+## This will choose a random tile from the valid possibilities and place it.
+func _place_rand_tile(rng : RandomNumberGenerator, grid : WFCGrid, coords : Vector2i):
+	var tiles : Array[Vector3i] = _get_valid_tiles(grid, coords)
+	var tile : Vector3i = _get_random_tile(rng, tiles)
+	_place_tile(grid, coords, tile)
+	_calc_cell_neighborhood_entropy(grid, coords)
+
 ## Calculate entropy for the entire grid.
 ##
 ## This calculates the Shannon entropy for every cell in the grid.
@@ -654,22 +703,125 @@ func _calc_grid_entropy(grid : WFCGrid):
 		for y : int in dims.y:
 			_calc_cell_entropy(grid, Vector2i(x, y))
 
+## Create the wave function collapse (WFC) queue.
+##
+## Load all open cells into a queue, organized as coordinate-cell pairs.
+func _create_wfc_queue(grid : WFCGrid) -> Array:
+	var dims : Vector2i = grid.get_dimensions()
+	var queue : Array = []
+	for x : int in dims.x:
+		for y : int in dims.y:
+			var cell : WFCCell = grid.get_cell(x, y)
+			if cell.get_status() == WFCCell.Status.OPEN:
+				queue.push_back([Vector2i(x, y), cell])
+	
+	return queue
+
+## Sort the wave function collapse (WFC) queue.
+##
+## The queue items will be sorted by entropy then distance from center.
+func _sort_wfc_queue(queue : Array) -> void:
+	queue.sort_custom(func (a, b):
+		if a[1].get_entropy() == b[1].get_entropy():
+			return a[0].distance_to(_dimensions/2.0) < b[0].distance_to(_dimensions/2.0)
+		return a[1].get_entropy() < b[1].get_entropy()
+	)
+
+## Use wave function collapse (WFC) to resolve the grid.
+##
+## Run through wave function collapse trying to solve for a valid state where
+## all tiles are occupied. Apply restarts and local resets up until the limit.
+##
+## All cells in the grid are expected to either be be opened or closed.
+## Invalid cells should be processed in advance.
+func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
+	# TODO: Remove retry logic, since noise and reset makes this no longer beneficial
+	
+	# Load all open cells into a queue, organized as coordinate-cell pairs
+	var queue : Array = _create_wfc_queue(grid)
+	
+	var resets_remaining : int = _max_local_resets
+	
+	while queue.size() > 0:
+		await _wait_on_debug_delay()
+		
+		_sort_wfc_queue(queue)
+		var next : Array = queue.pop_front()
+		var coords : Vector2i = next[0]
+		var cell : WFCCell = next[1]
+		
+		if cell.get_possibility_count() > 0:
+			_place_rand_tile(rng, grid, coords)
+			
+			# If there are no tiles left, this is successful
+			if queue.size() == 0:
+				grid.set_solved()
+				_print_debug_message(
+					String("A solution has been found."),
+					DebugSeverity.INFORMATION
+				)
+		else:
+			if resets_remaining > 0:
+				# Try a local reset if there are any available
+				resets_remaining -= 1
+				var cells_updated : Dictionary[Vector2i, WFCCell] = _remove_tiles_around(grid, coords, 2)
+				queue.push_back([coords, cell])
+				for neighbor_coords : Vector2i in cells_updated:
+					var neighbor_cell : WFCCell = cells_updated[neighbor_coords]
+					queue.push_back([neighbor_coords, neighbor_cell])
+			else:
+				# No resets means failure
+				grid.set_failed(WFCGrid.FailureCause.NO_SOLUTION)
+				_print_debug_message(
+					String("No solution could be found."),
+					DebugSeverity.INFORMATION
+				)
+				break
+
 # TODO: Document me
 # TODO: Add return
-func run() -> void:
-	var rand : RandomNumberGenerator = RandomNumberGenerator.new()
-	rand.seed = _seed
+func run() -> WFCGrid:
+	var start_time : int = Time.get_ticks_msec() ## When the process started
+	var rng : RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = _seed
 	var grid : WFCGrid = WFCGrid.new(_dimensions.x, _dimensions.y)
 	
+	_print_debug_message(
+		"The solver has started with seed " + str(_seed) + ".",
+		DebugSeverity.INFORMATION
+	)
+	
 	# Phase 1: Set grid cells to solid terrain tiles based on noise
-	_place_default_tiles(rand, grid)
+	_print_debug_message(
+		"Phase 1: Placing default tiles along generated noise.",
+		DebugSeverity.INFORMATION
+	)
+	_place_default_tiles(rng, grid)
 	await _wait_on_debug_delay()
 	
 	# Phase 2: Invalidate then reset all cells that border tiles which they should not neighbor. Calculate entropy.
+	_print_debug_message(
+		"Phase 2: Removing all tiles with invalid neighbor relationships.",
+		DebugSeverity.INFORMATION
+	)
 	_mark_invalid_cells(grid)
 	await _wait_on_debug_delay()
 	_reset_invalid_cells(grid)
 	_calc_grid_entropy(grid)
 	await _wait_on_debug_delay()
 	
-	# TODO: Phase 3: Run wave function collapse, with local resets, until a full grid is found
+	# TODO: Phase 3: Run wave function collapse, with restarts and local resets, until a full grid is found
+	_print_debug_message(
+		"Phase 3: Running wave function collapse process.",
+		DebugSeverity.INFORMATION
+	)
+	await _solve_wfc(rng, grid)
+	
+	var end_time : int = Time.get_ticks_msec() ## When the process ended
+	
+	_print_debug_message(
+		String("The solver has finished and has taken " + str(end_time - start_time) + "ms to run."),
+		DebugSeverity.INFORMATION
+	)
+	
+	return grid
