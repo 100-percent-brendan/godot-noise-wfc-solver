@@ -757,14 +757,29 @@ func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
 			if queue.size() == 0:
 				grid.set_solved()
 				_print_debug_message(
-					String("A solution has been found."),
+					String(
+						"A solution has been found with " + str(resets_remaining) +\
+						" of " + str(_max_local_resets) + " local resets remaining."
+					),
 					DebugSeverity.INFORMATION
 				)
 		else:
 			if resets_remaining > 0:
 				# Try a local reset if there are any available
 				resets_remaining -= 1
-				var cells_updated : Dictionary[Vector2i, WFCCell] = _remove_tiles_around(grid, coords, 1)
+				var tile_removal_radius : int = 1
+				
+				# To prevent this from getting stuck in loops
+				# Alternate how many tiles to remove
+				# By default, remove a radius of 1
+				# Increase to 2 and 3 on the 15th and 18th iterations
+				# Assuming this starts at a multiple of 20
+				if (resets_remaining % 10) == 5:
+					tile_removal_radius = 2
+				if (resets_remaining % 10) == 2:
+					tile_removal_radius = 3
+				
+				var cells_updated : Dictionary[Vector2i, WFCCell] = _remove_tiles_around(grid, coords, tile_removal_radius)
 				queue.push_back([coords, cell])
 				for neighbor_coords : Vector2i in cells_updated:
 					var neighbor_cell : WFCCell = cells_updated[neighbor_coords]
