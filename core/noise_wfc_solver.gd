@@ -49,8 +49,9 @@ var _debug_mode : bool = false ## Output debug messages and information.
 var _debug_delay : float = 0.0 ## Delay between tile placements and other major actions.
 var _seed : int = 0 ## The seed used in the pseudorandom number generator (PRNG).
 var _dimensions : Vector2i = Vector2i(MIN_SIZE, MIN_SIZE) ## The dimensions of the output grid.
-var _max_retries : int = 100 ## The maximum number of retry attempts.
 var _max_local_resets : int = 1000 ## The maximum number of local resets.
+var _max_cleanup_iterations : int = 5 ## The maximum number of cleanup iterations.
+var _max_cleanup_local_resets : int = 100 ## The maximum number of local resets per cleanup iteration.
 var _tile_set : TileSet ## The tileset.
 var _noise : Noise ## The noise generator.
 # TODO: Consider adding noise parameters
@@ -375,17 +376,24 @@ func set_seed(prng_seed : int) -> void:
 func set_dimensions(width : int, height : int) -> void:
 	_dimensions = Vector2i(maxi(width, MIN_SIZE), maxi(height, MIN_SIZE))
 
-## Set the maximum number of retry attempts before the solver gives up.
-##
-## This must be a positive integer.
-func set_max_retries(max_retries : int) -> void:
-	_max_retries = maxi(max_retries, 1)
-
 ## Set the maximum number of local retries before the solver gives up.
 ##
 ## This must be zero or above.
 func set_max_local_resets(max_local_resets : int) -> void:
-	_max_local_resets = maxi(max_local_resets, 1)
+	_max_local_resets = maxi(max_local_resets, 0)
+
+## Set the maximum number of cleanup iterations to run.
+##
+## This must be zero or above.
+func set_max_cleanup_iterations(iterations : int) -> void:
+	_max_cleanup_iterations = maxi(iterations, 0)
+
+## Set the maximum number of local retries, within a cleanup iteration, before
+## the solver gives up.
+##
+## This must be zero or above.
+func set_max_cleanup_local_resets(max_local_resets : int) -> void:
+	_max_cleanup_local_resets = maxi(max_local_resets, 0)
 
 ## Get the terrain index from the probability distribution belonging to x.
 ##
@@ -730,17 +738,17 @@ func _sort_wfc_queue(queue : Array) -> void:
 ## Use wave function collapse (WFC) to resolve the grid.
 ##
 ## Run through wave function collapse trying to solve for a valid state where
-## all tiles are occupied. Apply restarts and local resets up until the limit.
+## all tiles are occupied. Apply local resets up until the limit.
 ##
 ## All cells in the grid are expected to either be be opened or closed.
 ## Invalid cells should be processed in advance.
-func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
-	# TODO: Remove retry logic, since noise and reset makes this no longer beneficial
-	
+##
+## Returns true if a solution is found, false if not.
+func _run_wfc_loop(rng : RandomNumberGenerator, grid : WFCGrid, local_resets : int) -> bool:
 	# Load all open cells into a queue, organized as coordinate-cell pairs
 	var queue : Array = _create_wfc_queue(grid)
 	
-	var resets_remaining : int = _max_local_resets
+	var resets_remaining : int = local_resets
 	
 	while queue.size() > 0:
 		await _wait_on_debug_delay()
@@ -759,10 +767,11 @@ func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
 				_print_debug_message(
 					String(
 						"A solution has been found with " + str(resets_remaining) +\
-						" of " + str(_max_local_resets) + " local resets remaining."
+						" of " + str(local_resets) + " local resets remaining."
 					),
 					DebugSeverity.INFORMATION
 				)
+				return true
 		else:
 			if resets_remaining > 0:
 				# Try a local reset if there are any available
@@ -791,7 +800,29 @@ func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
 					String("No solution could be found."),
 					DebugSeverity.INFORMATION
 				)
-				break
+				
+				return false
+	
+	return false
+
+## Use wave function collapse (WFC) to resolve the grid.
+##
+## Run through wave function collapse trying to solve for a valid state where
+## all tiles are occupied. Apply local resets up until the limit.
+## Run clean up routines to remove small artifacts, reapplying WFC after
+## removing tiles.
+##
+## All cells in the grid are expected to either be be opened or closed.
+## Invalid cells should be processed in advance.
+func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid):
+	_print_debug_message(
+		String("Starting primary wave function loop."),
+		DebugSeverity.INFORMATION
+	)
+	
+	# Abort if loop fails
+	if !(await _run_wfc_loop(rng, grid, _max_local_resets)):
+		return
 
 # TODO: Document me
 # TODO: Add return
