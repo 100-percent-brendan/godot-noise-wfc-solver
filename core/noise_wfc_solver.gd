@@ -220,7 +220,7 @@ func _build_tile_weights() -> void:
 		
 		var base_weight : float = 1.0
 		if is_edge:
-			base_weight = 1.0 / 80.0 # Edge pieces should be much less frequent, otherwise they dominate
+			base_weight = 1.0 / 40.0 # Edge pieces should be much less frequent, otherwise they dominate
 		
 		# Make sure each layout only take up a single tiles' worth of probability
 		for tile : Vector3i in _layout_tiles[i]:
