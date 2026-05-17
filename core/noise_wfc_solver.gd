@@ -50,8 +50,6 @@ var _debug_delay : float = 0.0 ## Delay between tile placements and other major 
 var _seed : int = 0 ## The seed used in the pseudorandom number generator (PRNG).
 var _dimensions : Vector2i = Vector2i(MIN_SIZE, MIN_SIZE) ## The dimensions of the output grid.
 var _max_local_resets : int = 1000 ## The maximum number of local resets.
-var _max_cleanup_iterations : int = 5 ## The maximum number of cleanup iterations.
-var _max_cleanup_local_resets : int = 100 ## The maximum number of local resets per cleanup iteration.
 var _tile_set : TileSet ## The tileset.
 var _noise : Noise ## The noise generator.
 # TODO: Consider adding noise parameters
@@ -381,19 +379,6 @@ func set_dimensions(width : int, height : int) -> void:
 ## This must be zero or above.
 func set_max_local_resets(max_local_resets : int) -> void:
 	_max_local_resets = maxi(max_local_resets, 0)
-
-## Set the maximum number of cleanup iterations to run.
-##
-## This must be zero or above.
-func set_max_cleanup_iterations(iterations : int) -> void:
-	_max_cleanup_iterations = maxi(iterations, 0)
-
-## Set the maximum number of local retries, within a cleanup iteration, before
-## the solver gives up.
-##
-## This must be zero or above.
-func set_max_cleanup_local_resets(max_local_resets : int) -> void:
-	_max_cleanup_local_resets = maxi(max_local_resets, 0)
 
 ## Get the terrain index from the probability distribution belonging to x.
 ##
@@ -809,14 +794,12 @@ func _run_wfc_loop(rng : RandomNumberGenerator, grid : WFCGrid, local_resets : i
 ##
 ## Run through wave function collapse trying to solve for a valid state where
 ## all tiles are occupied. Apply local resets up until the limit.
-## Run clean up routines to remove small artifacts, reapplying WFC after
-## removing tiles.
 ##
 ## All cells in the grid are expected to either be be opened or closed.
 ## Invalid cells should be processed in advance.
 func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid):
 	_print_debug_message(
-		String("Starting primary wave function loop."),
+		String("Starting wave function loop."),
 		DebugSeverity.INFORMATION
 	)
 	
