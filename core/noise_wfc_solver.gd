@@ -52,6 +52,7 @@ var _dimensions : Vector2i = Vector2i(MIN_SIZE, MIN_SIZE) ## The dimensions of t
 var _max_local_resets : int = 1000 ## The maximum number of local resets.
 var _tile_set : TileSet ## The tileset.
 var _noise : Noise ## The noise generator.
+var _prob_config : WFCProbabilityConfiguration ## The probability configuration.
 # TODO: Consider adding noise parameters
 # TODO: Make sure all the below are used somewhere
 var _tiles : Dictionary[Vector3i, Array] = {} ## A collection of tile-layout mappings. The key is the tile (source ID and atlas coords) and the value is the terrain layout.
@@ -69,16 +70,28 @@ var _terrain_distribution : Array[Array] = [] ## The distribution of probabiliti
 ##
 ## It is expected that within the [param tile_set] all tiles will be
 ## one-tile-by-one-tile in size. Only tiles with terrain mappings will be
-## used. Only the first terrain set encountered will be used.
+## used. Only the first terrain set encountered (terrain 0) will be used.
 ##
 ## The [param noise] can be set to any [Noise], but should have smooth transitions
-## and go through the full range, for best effect.
-func _init(tile_set : TileSet, noise : Noise) -> void:
+## and go through the full range, for best effect. This will inform the terrain
+## distributions.
+##
+## An optional [param prob_config] may be supplied to alter default probability
+## distributions.
+func _init(
+	tile_set : TileSet, noise : Noise, prob_config : WFCProbabilityConfiguration = null
+) -> void:
 	_tile_set = tile_set
 	_noise = noise
 	
 	if !_noise:
 		_print_debug_message("A valid noise generator must be provided.", DebugSeverity.ERROR)
+	
+	# Ensure there is always a probability configuration.
+	if prob_config:
+		_prob_config = prob_config
+	else:
+		_prob_config = WFCProbabilityConfiguration.new()
 	
 	# Load the tile and terrain data
 	_load_tile_data()
@@ -220,7 +233,7 @@ func _build_tile_weights() -> void:
 		
 		var base_weight : float = 1.0
 		if is_edge:
-			base_weight = 1.0 / 40.0 # Edge pieces should be much less frequent, otherwise they dominate
+			base_weight = _prob_config.get_terrain_edge_weight()
 		
 		# Make sure each layout only take up a single tiles' worth of probability
 		for tile : Vector3i in _layout_tiles[i]:

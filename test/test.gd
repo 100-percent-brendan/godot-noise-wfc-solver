@@ -47,11 +47,15 @@ func _run_solver() -> void:
 	_is_running = true
 	var solver_seed = seed_input.value
 	
+	# Initialize the probability configuration
+	var prob_config := WFCProbabilityConfiguration.new()
+	prob_config.set_terrain_edge_weight(1.0 / 60.0)
+	
 	# Initialize the solver
 	var noise : FastNoiseLite = load("res://test/assets/noise.tres").duplicate()
 	noise.seed = solver_seed
 	var solver : NoiseWFCSolver ## The solver used for debugging.
-	solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise)
+	solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise, prob_config)
 	solver.set_seed(solver_seed)
 	solver.set_debug_mode(true)
 	solver.set_debug_delay(0.0)
