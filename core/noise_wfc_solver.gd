@@ -337,6 +337,9 @@ func _find_terrain_sequence() -> void:
 	for edge : Vector2i in _terrain_edges:
 		var u : int = edge[0]
 		var v : int = edge[1]
+		# Skip over terrains that have 0.0 frequency
+		if _prob_config.get_terrain_frequency(u) == 0.0 || _prob_config.get_terrain_frequency(v) == 0.0:
+			continue
 		if !graph.has(u):
 			graph[u] = {}
 		if !graph.has(v):
