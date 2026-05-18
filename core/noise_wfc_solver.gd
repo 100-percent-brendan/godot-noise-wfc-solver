@@ -4,6 +4,7 @@ class_name NoiseWFCSolver extends Node
 # TODO: Confirm all constructs and enumerations are used.
 # TODO: Place sufficient debugging information
 # TODO: Ensure sufficient protection checks
+# TODO: Add safety to return to defer to core loop to prevent program freezing
 
 ## A signal for when a tile is placed.
 signal tile_placed(coords : Vector2i, source_id : int, atlas_coords : Vector2i)
@@ -11,7 +12,6 @@ signal tile_placed(coords : Vector2i, source_id : int, atlas_coords : Vector2i)
 ## A signal for when a tile is removed.
 signal tile_removed(coords : Vector2i)
 
-# TODO: Replace me
 ## A signal for when tile possibilities are updated.
 signal cell_possibilities_updated(coords : Vector2i, count : int, entropy : float)
 
@@ -326,21 +326,27 @@ func _find_terrain_sequence() -> void:
 ##
 ## This is normalized between 0 and 1.
 ## If a terrain appears multiple times, it will be adjusted to match the frequency of other terrains.
+## This applies terrain frequencies from the [WFCProbabilityConfiguration].
 ##
 ## X is the domain end (the highest) and Y is the terrain.
 func _build_terrain_distribution() -> void:
-	# TODO Consider applying per-terrain frequencies; e.g. some terrains are more likely than others
+	var terrain_weights : Dictionary[int, float] = {}
 	var counts : Dictionary[int, int] = {}
 	for terrain : int in _terrain_sequence:
 		if !counts.has(terrain):
 			counts[terrain] = 0
 		counts[terrain] += 1
+		terrain_weights[terrain] = _prob_config.get_terrain_frequency(terrain)
+	
+	var total_weight : float = 0.0
+	for terrain : int in terrain_weights:
+		total_weight += terrain_weights[terrain]
 	
 	var end : float = 0.0 # Current domain end
 	var distribution : Array[Array] = []
 	for terrain : int in _terrain_sequence:
 		# Adjust frequencies so terrains that appear more in the sequence are evened out
-		var weight : float = 1.0 / counts.size() / counts[terrain]
+		var weight : float = terrain_weights[terrain] / total_weight / counts[terrain]
 		end += weight
 		distribution.push_back([end,terrain])
 	
