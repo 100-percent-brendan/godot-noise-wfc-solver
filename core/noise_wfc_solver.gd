@@ -1,9 +1,6 @@
 class_name NoiseWFCSolver extends Node
 ## Noise-based wave function collapse (WFC) solver.
 # TODO: Document me.
-# TODO: Confirm all constructs and enumerations are used.
-# TODO: Place sufficient debugging information
-# TODO: Ensure sufficient protection checks
 # TODO: Add safety to return to defer to core loop to prevent program freezing
 
 ## A signal for when a tile is placed.
@@ -56,8 +53,6 @@ var _max_local_resets : int = 1000 ## The maximum number of local resets.
 var _tile_set : TileSet ## The tileset.
 var _noise : Noise ## The noise generator.
 var _prob_config : WFCProbabilityConfiguration ## The probability configuration.
-# TODO: Consider adding noise parameters
-# TODO: Make sure all the below are used somewhere
 var _tiles : Dictionary[Vector3i, Array] = {} ## A collection of tile-layout mappings. The key is the tile (source ID and atlas coords) and the value is the terrain layout.
 var _tile_weights : Dictionary[Vector3i, float] = {} ## A collection of tile probability weights for each tile (source ID and atlas coords).
 var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by terrain index. The key is the terrain index and the value is an [Array] of tiles (source ID and atlas coords).
@@ -67,7 +62,6 @@ var _layout_neighbors : Dictionary[int, Dictionary] = {} ## A collection of layo
 var _terrain_edges : Array[Vector2i] = [] ## The edges between terrains.
 var _terrain_sequence : Array[int] = [] ## The most efficient sequence to go over all terrains to ensure all edges are represented.
 var _terrain_distribution : Array[Array] = [] ## The distribution of probabilities for terrains, respecting sequencing. X is domain end and Y is terrain index.
-# TODO: Determine what terrains border each other
 
 ## Initialize the wave function collapse solver.
 ##
@@ -139,7 +133,6 @@ func _load_tile_data() -> void:
 ##
 ## Returns an empty array on data missing.
 func _get_terrain_layout(tile_data : TileData) -> Array[int]:
-	# TODO: Consider adding the center tile to the return
 	var layout : Array[int] = []
 	
 	# Ensure this is part of the correct terrain set
@@ -172,7 +165,6 @@ func _index_tile(tile : Vector3i, layout : Array) -> void:
 		
 		# Organize tiles by terrain
 		var 	unique_terrains = []
-		# TODO: Add check here to omit or include desired terrain types
 		for terrain in layout:
 			# Create terrain array if it does not exist
 			if !_terrain_tiles.has(terrain):
@@ -214,7 +206,6 @@ func _index_tile(tile : Vector3i, layout : Array) -> void:
 ## - All tiles with the same layout have their probabilities divided by the amount of tiles in their layout group.
 ## - Include weight from terrain set
 func _build_tile_weights() -> void:
-	# TODO: Consider include weight bias for different types of terrains, based on input to class
 	var weights : Dictionary[Vector3i, float] = {}
 	for i : int in _terrain_layouts.size():
 		var layout : Array = _terrain_layouts[i]
@@ -846,7 +837,7 @@ func run() -> WFCGrid:
 	_calc_grid_entropy(grid)
 	await _wait_on_debug_delay()
 	
-	# TODO: Phase 3: Run wave function collapse, with restarts and local resets, until a full grid is found
+	# Phase 3: Run wave function collapse, with local resets, until a full grid is found
 	_print_debug_message(
 		"Phase 3: Running wave function collapse process.",
 		DebugSeverity.INFORMATION
