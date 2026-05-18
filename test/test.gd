@@ -48,7 +48,7 @@ func _run_solver() -> void:
 	
 	# Initialize the probability configuration
 	var prob_config := WFCProbabilityConfiguration.new()
-	prob_config.set_terrain_frequency(0, 2.0) # Set the frequency for grass (terrain 0)
+	prob_config.set_terrain_frequency(0, 1.2) # Set the frequency for grass (terrain 0)
 	prob_config.set_terrain_frequency(2, 0.4) # Set the frequency for water (terrain 2)
 	prob_config.set_terrain_edge_weight(1.0 / 60.0)
 	
