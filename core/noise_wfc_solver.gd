@@ -805,8 +805,21 @@ func set_dimensions(width : int, height : int) -> void:
 func set_max_local_resets(max_local_resets : int) -> void:
 	_max_local_resets = maxi(max_local_resets, 0)
 
-# TODO: Document me
-# TODO: Add return
+## Run the noise-based wave function collapse (WFC) solver.
+##
+## This consists of several phases including:
+## 1. Using noise to set the initial tile state of the grid to solid-edged terrain
+##    tiles, based on the terrain distribution. This will result in invalid tile
+##    placements; this is intentional.
+## 2. Remove all tiles with invalid neighbor relationships. For example, a mud
+##    tile edge touching a grass tile edge.
+## 3. Calculate the entropy and possible tile counts for the open grid cells.
+## 4. Run the wave function collapse solver until the grid has a fully-solved
+##    grid, or runs out of attempts. Internally, this will reset groups of cells
+##    if there are no valid tiles for a space.
+##
+## Returns a [WFCGrid] with tiles placed in valid positions. Be sure to check
+## the status of the [WFCGrid] to make sure the solver was successful.
 func run() -> WFCGrid:
 	var start_time : int = Time.get_ticks_msec() ## When the process started
 	var rng : RandomNumberGenerator = RandomNumberGenerator.new()
@@ -826,7 +839,7 @@ func run() -> WFCGrid:
 	_place_default_tiles(rng, grid)
 	await _wait_on_debug_delay()
 	
-	# Phase 2: Invalidate then reset all cells that border tiles which they should not neighbor. Calculate entropy.
+	# Phase 2: Invalidate then reset all cells that border tiles which they should not neighbor.
 	_print_debug_message(
 		"Phase 2: Removing all tiles with invalid neighbor relationships.",
 		DebugSeverity.INFORMATION
@@ -834,12 +847,18 @@ func run() -> WFCGrid:
 	_mark_invalid_cells(grid)
 	await _wait_on_debug_delay()
 	_reset_invalid_cells(grid)
+	
+	# Phase 3: Calculate initial entropy scores and possible tiles for each open cells.
+	_print_debug_message(
+		"Phase 3: Calculate entropy and possible tiles for open cells.",
+		DebugSeverity.INFORMATION
+	)
 	_calc_grid_entropy(grid)
 	await _wait_on_debug_delay()
 	
-	# Phase 3: Run wave function collapse, with local resets, until a full grid is found
+	# Phase 4: Run wave function collapse, with local resets, until a full grid is found
 	_print_debug_message(
-		"Phase 3: Running wave function collapse process.",
+		"Phase 4: Running wave function collapse process.",
 		DebugSeverity.INFORMATION
 	)
 	await _solve_wfc(rng, grid)
