@@ -1,6 +1,36 @@
 class_name NoiseWFCSolver extends Node
 ## Noise-based wave function collapse (WFC) solver.
-# TODO: Document me.
+##
+## The initialization routine of the solver will extract terrain tile data from
+## a [TileSet], and use this to build relevant data structures and probabilities.
+## There are several expectations for the supplied tileset:
+## 1. Tile shape shall be square.
+## 2. A terrain set shall be supplied at index 0, with at least one valid terrain.
+## 3. The terrain mode shall be set to match corners and sides.
+## 4. Tiles shall contain terrain data on all edge points.
+## 5. Each tile shall be 1x1 in terms of unit size.
+## 6. There must be edge pieces between bordering terrains allowing placement
+##    in all cardinal directions. A very simple subset of the Wang set may be
+##    used.
+## 7. Terrains must logically flow such that no terrain is orphaned from the
+##    set. For example, water flows to mud flows to grass, but lava should not
+##    be on its own.
+##
+## Internally, a route inspection (Chinese postman) problem solver is used.
+## This forms a way to map noise to terrains in a way that only allows edges
+## that can touch.
+##
+## Any valid [Noise] object may be supplied to inform tile placement. As not all
+## noise algorithms are equal, experimentation is recommended when mixing noise
+## with any given tile set. To start, it was discovered that using the
+## fractal type "ping-pong" with value cubic or cellular noise has low-cost,
+## visually-consistent results.
+##
+## To further tune probabilities, an optional [WFCProbabilityConfiguration]
+## may be supplied.
+##
+## To learn what happens when you run the solver, see the documentation for the
+##  [code]run()[/code] method.
 # TODO: Add safety to return to defer to core loop to prevent program freezing
 
 ## A signal for when a tile is placed.
