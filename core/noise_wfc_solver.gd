@@ -375,40 +375,12 @@ func _wait_on_debug_delay():
 	if _debug_mode && _debug_delay > 0.0:
 		await Engine.get_main_loop().create_timer(_debug_delay).timeout
 
-## Set if the solver will output debug messages and information.
-func set_debug_mode(debug_mode : bool) -> void:
-	_debug_mode = debug_mode
-
-## Set the amount of time between major actions, such as tile placements, when debugging.
-##
-## The delay will likely sync to the nearest physics cycle above it in time.
-func set_debug_delay(delay : float) -> void:
-	_debug_delay = max(delay, 0.0)
-
-## Set the seed for the pseudorandom number generator (PRNG).
-func set_seed(prng_seed : int) -> void:
-	_seed = prng_seed
-
-## Set the dimensions of the output grid.
-##
-## Each cell represents a tile unit. Must be larger than the minimum size in
-## each dimension.
-func set_dimensions(width : int, height : int) -> void:
-	_dimensions = Vector2i(maxi(width, MIN_SIZE), maxi(height, MIN_SIZE))
-
-## Set the maximum number of local retries before the solver gives up.
-##
-## This must be zero or above.
-func set_max_local_resets(max_local_resets : int) -> void:
-	_max_local_resets = maxi(max_local_resets, 0)
-
 ## Get the terrain index from the probability distribution belonging to x.
 ##
 ## The [param x] parameters expects a value between 0 and 1.
 ##
 ## Returns the terrain index or -1 on none found.
 func _get_terrain_by_distribution(x : float) -> int:
-	# TODO: Move into private section
 	for i : int in _terrain_distribution.size():
 		var bottom : float = 0.0 # The floor
 		if i > 0:
@@ -425,7 +397,6 @@ func _get_terrain_by_distribution(x : float) -> int:
 ##
 ## Returns the terrain index or -1 on none found.
 func _get_default_terrain(coords : Vector2i) -> int:
-	# TODO: Move into private section
 	if !_noise:
 		return -1
 	
@@ -436,14 +407,12 @@ func _get_default_terrain(coords : Vector2i) -> int:
 ##
 ## This does not check if a placement is valid.
 func _place_tile(grid : WFCGrid, coords : Vector2i, tile : Vector3i) -> void:
-	# TODO: Move into private section
 	var cell = grid.get_cell(coords.x, coords.y)
 	cell.place_tile(tile)
 	tile_placed.emit(coords, tile.x, Vector2i(tile.y, tile.z))
 
 ## Remove tile and reset grid cell.
 func _remove_tile(grid : WFCGrid, coords : Vector2i) -> void:
-	# TODO: Move into private section
 	var cell = grid.get_cell(coords.x, coords.y)
 	cell.reset()
 	tile_removed.emit(coords)
@@ -454,7 +423,6 @@ func _remove_tile(grid : WFCGrid, coords : Vector2i) -> void:
 ##
 ## Returns the tile as source ID and atlas coords, or [code]Vector3i(-1, -1, -1)[/code] on error.
 func _get_random_tile(rng : RandomNumberGenerator, tiles : Array) -> Vector3i:
-	# TODO: Move into private section
 	var total_weight : float = 0.0
 	
 	for tile in tiles:
@@ -518,9 +486,6 @@ func _get_valid_tiles(grid : WFCGrid, coords : Vector2i) -> Array[Vector3i]:
 ## placed there. This also works to identify if a cell already in a tile is
 ## valid.
 func _is_tile_placement_valid(grid : WFCGrid, coords : Vector2i, tile : Vector3i) -> bool:
-	# TODO: Move into private section
-	# TODO: This might need to be reversed
-	
 	# If this cell is open or invalid, skip checking as it is unnecessary
 	var status := grid.get_cell(coords.x, coords.y).get_status()
 	if status == WFCCell.Status.INVALID:
@@ -566,7 +531,6 @@ func _is_tile_placement_valid(grid : WFCGrid, coords : Vector2i, tile : Vector3i
 ##
 ## This calculates the Shannon entropy for a possibility space, saving it to the cell.
 func _calc_cell_entropy(grid : WFCGrid, coords : Vector2i) -> void:
-	# TODO: Move into private section
 	var cell : WFCCell = grid.get_cell(coords.x, coords.y)
 	if !cell:
 		return
@@ -597,7 +561,6 @@ func _calc_cell_entropy(grid : WFCGrid, coords : Vector2i) -> void:
 ## This calculates the Shannon entropy for a possibility space, for the cell
 ## and the neighbors touching it above, below, to the right, and left.
 func _calc_cell_neighborhood_entropy(grid : WFCGrid, coords : Vector2i):
-	# TODO: Move into private section
 	_calc_cell_entropy(grid, coords)
 	_calc_cell_entropy(grid, Vector2i(coords.x - 1, coords.y))
 	_calc_cell_entropy(grid, Vector2i(coords.x + 1, coords.y))
@@ -608,7 +571,6 @@ func _calc_cell_neighborhood_entropy(grid : WFCGrid, coords : Vector2i):
 ##
 ## This is intended to place cells, many of which will be invalid and will later be removed.
 func _place_default_tiles(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
-	# TODO: Move into private section
 	var dims : Vector2i = grid.get_dimensions()
 	for x : int in dims.x:
 		for y : int in dims.y:
@@ -640,7 +602,6 @@ func _place_default_tiles(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
 ##
 ## Goes through all cells in the grid and marks any that should be invalid.
 func _mark_invalid_cells(grid : WFCGrid):
-	# TODO: Move into private section
 	var dims : Vector2i = grid.get_dimensions()
 	for x : int in dims.x:
 		for y : int in dims.y:
@@ -648,13 +609,11 @@ func _mark_invalid_cells(grid : WFCGrid):
 			if cell.get_status() == WFCCell.Status.CLOSED:
 				if !_is_tile_placement_valid(grid, Vector2i(x, y), cell.get_tile()):
 					cell.mark_invalid()
-	# TODO: Trigger event to render this
 
 ## Reset any invalid cells.
 ##
 ## Goes through all cells in the grid and resets any marked invalid.
 func _reset_invalid_cells(grid : WFCGrid):
-	# TODO: Move into private section
 	var dims : Vector2i = grid.get_dimensions()
 	for x : int in dims.x:
 		for y : int in dims.y:
@@ -668,7 +627,6 @@ func _reset_invalid_cells(grid : WFCGrid):
 ##
 ## Returns any cells, indexed by coordinates, that had tile removed.
 func _remove_tiles_around(grid : WFCGrid, coords : Vector2i, radius : int) -> Dictionary[Vector2i, WFCCell]:
-	# TODO: Move into private section
 	var cells_reset : Dictionary[Vector2i, WFCCell] = {}
 	radius = max(radius, 1)
 	
@@ -712,7 +670,6 @@ func _place_rand_tile(rng : RandomNumberGenerator, grid : WFCGrid, coords : Vect
 ##
 ## This calculates the Shannon entropy for every cell in the grid.
 func _calc_grid_entropy(grid : WFCGrid):
-	# TODO: Move into private section
 	var dims : Vector2i = grid.get_dimensions()
 	for x : int in dims.x:
 		for y : int in dims.y:
@@ -829,6 +786,33 @@ func _solve_wfc(rng : RandomNumberGenerator, grid : WFCGrid):
 	# Abort if loop fails
 	if !(await _run_wfc_loop(rng, grid, _max_local_resets)):
 		return
+
+## Set if the solver will output debug messages and information.
+func set_debug_mode(debug_mode : bool) -> void:
+	_debug_mode = debug_mode
+
+## Set the amount of time between major actions, such as tile placements, when debugging.
+##
+## The delay will likely sync to the nearest physics cycle above it in time.
+func set_debug_delay(delay : float) -> void:
+	_debug_delay = max(delay, 0.0)
+
+## Set the seed for the pseudorandom number generator (PRNG).
+func set_seed(prng_seed : int) -> void:
+	_seed = prng_seed
+
+## Set the dimensions of the output grid.
+##
+## Each cell represents a tile unit. Must be larger than the minimum size in
+## each dimension.
+func set_dimensions(width : int, height : int) -> void:
+	_dimensions = Vector2i(maxi(width, MIN_SIZE), maxi(height, MIN_SIZE))
+
+## Set the maximum number of local retries before the solver gives up.
+##
+## This must be zero or above.
+func set_max_local_resets(max_local_resets : int) -> void:
+	_max_local_resets = maxi(max_local_resets, 0)
 
 # TODO: Document me
 # TODO: Add return
