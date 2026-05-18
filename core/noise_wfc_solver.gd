@@ -15,6 +15,9 @@ signal tile_removed(coords : Vector2i)
 ## A signal for when tile possibilities are updated.
 signal cell_possibilities_updated(coords : Vector2i, count : int, entropy : float)
 
+## A signal for when the grid is cleared.
+signal grid_cleared()
+
 ## The debug message severity.
 enum DebugSeverity {
 	INFORMATION, ## An informational message.
@@ -800,6 +803,7 @@ func _run_wfc_loop(rng : RandomNumberGenerator, grid : WFCGrid, local_resets : i
 			else:
 				# No resets means failure
 				grid.set_failed(WFCGrid.FailureCause.NO_SOLUTION)
+				grid_cleared.emit()
 				_print_debug_message(
 					String("No solution could be found."),
 					DebugSeverity.INFORMATION

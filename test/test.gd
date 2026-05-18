@@ -1,15 +1,14 @@
 extends Node2D
 ## A simple test of the [NoiseWFCSolver].
 ##
-## This uses an incrementing seed to aid in debugging the solver, as well as
+## This uses a tester configurable seed to aid in debugging the solver, as well as
 ## demonstration.
-# TODO: Confirm what is still valid below
 
 const GRID_WIDTH : int = 30 ## The grid width in tiles.
 const GRID_HEIGHT : int = 20 ## The grid height in tiles.
 const RENDER_LABEL_TEXT : bool = false ## Whether or not to render label text. Enable this to see too much information.
 
-@onready var tile_map_layer : TileMapLayer = $TileMapLayer ## A TileMapLayer to place tiles within.
+@onready var tile_map_layer : TileMapLayer = $TileMapLayer ## A [TileMapLayer] to place tiles within.
 @onready var labels : Node2D = $Labels ## Labels used to render tiles remaining and entropy.
 @onready var seed_input = $CanvasLayer/PanelContainer/VBoxContainer/SeedContainer/SeedInput
 @onready var run_button = $CanvasLayer/PanelContainer/VBoxContainer/RunContainer/RunButton
@@ -43,7 +42,7 @@ func _run_solver() -> void:
 	# Clear tiles between runs
 	_clear_grid()
 	
-	# Enable double run protection and capture variables locally
+	# Enable double run protection and cache variables locally
 	_is_running = true
 	var solver_seed = seed_input.value
 	
@@ -53,7 +52,7 @@ func _run_solver() -> void:
 	prob_config.set_terrain_frequency(2, 0.4) # Set the frequency for water (terrain 2)
 	prob_config.set_terrain_edge_weight(1.0 / 60.0)
 	
-	# Initialize the solver
+	# Initialize the solver, along with the noise that powers it
 	var noise : FastNoiseLite = load("res://test/assets/noise.tres").duplicate()
 	noise.seed = solver_seed
 	var solver : NoiseWFCSolver ## The solver used for debugging.
@@ -67,6 +66,7 @@ func _run_solver() -> void:
 	solver.tile_placed.connect(_on_tile_placed)
 	solver.tile_removed.connect(_on_tile_removed)
 	solver.cell_possibilities_updated.connect(_on_cell_possibilities_updated)
+	solver.grid_cleared.connect(_clear_grid)
 	
 	# Run the solver
 	#var _grid := await solver.run() # TODO: Add this
@@ -76,6 +76,7 @@ func _run_solver() -> void:
 	solver.tile_placed.disconnect(_on_tile_placed)
 	solver.tile_removed.disconnect(_on_tile_removed)
 	solver.cell_possibilities_updated.disconnect(_on_cell_possibilities_updated)
+	solver.grid_cleared.disconnect(_clear_grid)
 	
 	_is_running = false
 
