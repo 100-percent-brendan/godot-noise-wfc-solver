@@ -69,8 +69,7 @@ func _run_solver() -> void:
 	solver.grid_cleared.connect(_clear_grid)
 	
 	# Run the solver
-	#var _grid := await solver.run() # TODO: Add this
-	await solver.run() # TODO: Replace me with above
+	var _grid := await solver.run()
 	
 	# Disconnect signals
 	solver.tile_placed.disconnect(_on_tile_placed)
