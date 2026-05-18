@@ -30,7 +30,7 @@ class_name NoiseWFCSolver extends Node
 ## may be supplied.
 ##
 ## To learn what happens when you run the solver, see the documentation for the
-##  [code]run()[/code] method.
+## [code]run()[/code] method.
 # TODO: Add safety to return to defer to core loop to prevent program freezing
 
 ## A signal for when a tile is placed.
