@@ -1,12 +1,12 @@
 class_name RouteInspectionSolver extends Node
-## Solver for the route inspection problem.
+## Solver for the route inspection (Chinese postman) problem.
 ##
 ## Intended to find the most efficient path that includes all edges in a
 ## connected, undirected graph.
 ##
 ## See the initializer for the expected graph format.
 
-var _graph : Dictionary[int, Dictionary]
+var _graph : Dictionary[int, Dictionary] # The graph to search for a solution in.
 
 ## Check if a graph is connected.
 ##
@@ -158,7 +158,7 @@ func _get_odd_vertices() -> Array[int]:
 
 ## Find shortest paths between every pair of odd vertices.
 ##
-## Returns a 2D data structured composed of [Dictionary] objects, where the
+## Returns a 2D data structure composed of [Dictionary] objects, where the
 ## contained value is an array composed of the distance between two vertices and
 ## the path.
 func _find_shortest_odd_pair_paths(odd_verts : Array[int]) -> Dictionary:
