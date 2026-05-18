@@ -29,9 +29,11 @@ func get_terrain_edge_weight() -> float:
 ## The [param terrain] should match the index position of the terrain in the
 ## [TileSet].
 ##
-## The [param frequency] will be bounded to a range of 0.1 and 10.0.
+## The [param frequency] will be bounded to a range of 0.0 and 10.0.
+## Zero (0.0) means the terrain will be disabled.
+## Ensure at least one terrain is enabled to avoid errors.
 func set_terrain_frequency(terrain : int, frequency : float) -> void:
-	_terrain_frequencies[terrain] = clampf(frequency, 0.1, 10.0)
+	_terrain_frequencies[terrain] = clampf(frequency, 0.0, 10.0)
 
 ## Get the frequency weight for how likely a terrain is to appear.
 func get_terrain_frequency(terrain : int) -> float:
