@@ -40,6 +40,8 @@ func get_tile() -> Vector3i:
 func reset() -> void:
 	_tile = Vector3i()
 	_status = Status.OPEN
+	_entropy = 0.0
+	_possibility_count = 0
 
 ## Get the status.
 func get_status() -> Status:
