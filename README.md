@@ -1,3 +1,5 @@
 Noise-Based Wave Function Collapse Solver
 =========================================
-This wave function collapse (WFC) solver implementation uses a noise function to inform the initial placement of tiles, then employs a concept of invalidation prior to employing a variant of the simple tiled model of the WFC algorithm.
+This simple tiled model wave function collapse (WFC) solver uses a noise function to inform the initial placement of tiles, prior to tile invalidation and the application of the WFC algorithm.
+
+This method was devised as an improvement to one of my earlier [implementations of wave function collapse](https://github.com/100-percent-brendan/godot-stm-wfc-solver/tree/main).
