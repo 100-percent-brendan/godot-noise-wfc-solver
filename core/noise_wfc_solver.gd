@@ -75,34 +75,81 @@ const TERRAIN_LAYOUT_ORDER : Array[TileSet.CellNeighbor] = [
 	TileSet.CELL_NEIGHBOR_LEFT_SIDE
 ]
 
-var _debug_mode : bool = false ## Output debug messages and information.
-var _debug_delay : float = 0.0 ## Delay between tile placements and other major actions.
-var _last_defer : float = 0.0 ## Total time since last defer.
-var _seed : int = 0 ## The seed used in the pseudorandom number generator (PRNG).
-var _dimensions : Vector2i = Vector2i(MIN_SIZE, MIN_SIZE) ## The dimensions of the output grid.
-var _max_local_resets : int = 1000 ## The maximum number of local resets.
-var _tile_set : TileSet ## The tileset.
-var _noise : Noise ## The noise generator.
-var _prob_config : WFCProbabilityConfiguration ## The probability configuration.
-var _tiles : Dictionary[Vector3i, Array] = {} ## A collection of tile-layout mappings. The key is the tile (source ID and atlas coords) and the value is the terrain layout.
-var _tile_weights : Dictionary[Vector3i, float] = {} ## A collection of tile probability weights for each tile (source ID and atlas coords).
-var _terrain_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by terrain index. The key is the terrain index and the value is an [Array] of tiles (source ID and atlas coords).
-var _terrain_layouts : Array[Array] = [] ## A collection of terrain layouts.
-var _layout_tiles : Dictionary[int, Array] = {} ## A collection of tiles organized by layout. The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
-var _layout_neighbors : Dictionary[int, Dictionary] = {} ## A collection of layouts considered to be valid neighbors to another layout. The key is the terrain layout index and the value is collection (indexed by ComparisonDirection) of arrays of valid neighbor layout indices.
-var _terrain_edges : Array[Vector2i] = [] ## The edges between terrains.
-var _terrain_sequence : Array[int] = [] ## The most efficient sequence to go over all terrains to ensure all edges are represented.
-var _terrain_distribution : Array[Array] = [] ## The distribution of probabilities for terrains, respecting sequencing. X is domain end and Y is terrain index.
+## Output debug messages and information.
+var _debug_mode : bool = false
+
+## Delay between tile placements and other major actions.
+var _debug_delay : float = 0.0
+
+## Total time since last defer.
+var _last_defer : float = 0.0
+
+## The seed used in the pseudorandom number generator (PRNG).
+var _seed : int = 0
+
+## The dimensions of the output grid.
+var _dimensions : Vector2i = Vector2i(MIN_SIZE, MIN_SIZE)
+
+## The maximum number of local resets.
+var _max_local_resets : int = 1000
+
+## The tileset.
+var _tile_set : TileSet
+
+## The noise generator.
+var _noise : Noise
+
+## The probability configuration.
+var _prob_config : WFCProbabilityConfiguration
+
+## A collection of tile-layout mappings.
+##
+## The key is the tile (source ID and atlas coords) and the value is the terrain layout.
+var _tiles : Dictionary[Vector3i, Array] = {}
+
+## A collection of tile probability weights for each tile (source ID and atlas coords).
+var _tile_weights : Dictionary[Vector3i, float] = {}
+
+## A collection of tiles organized by terrain index.
+##
+## The key is the terrain index and the value is an [Array] of tiles (source ID and atlas coords).
+var _terrain_tiles : Dictionary[int, Array] = {}
+
+## A collection of terrain layouts.
+var _terrain_layouts : Array[Array] = []
+
+## A collection of tiles organized by layout.
+##
+## The key is the terrain layout index and the value is an [Array] of tiles (source ID and atlas coords).
+var _layout_tiles : Dictionary[int, Array] = {}
+
+## A collection of layouts considered to be valid neighbors to another layout.
+##
+## The key is the terrain layout index and the value is collection (indexed by ComparisonDirection)
+## of arrays of valid neighbor layout indices.
+var _layout_neighbors : Dictionary[int, Dictionary] = {}
+
+## The edges between terrains.
+var _terrain_edges : Array[Vector2i] = []
+
+## The most efficient sequence to go over all terrains to ensure all edges are represented.
+var _terrain_sequence : Array[int] = []
+
+## The distribution of probabilities for terrains, respecting sequencing.
+##
+## X is the end of the domain and Y is terrain index.
+var _terrain_distribution : Array[Array] = []
 
 ## Initialize the wave function collapse solver.
 ##
 ## It is expected that within the [param tile_set] all tiles will be
 ## one-tile-by-one-tile in size. Only tiles with terrain mappings will be
 ## used. Only the first terrain set encountered (terrain 0) will be used.
+## See the class header for more expectations.
 ##
 ## The [param noise] can be set to any [Noise], but should have smooth transitions
 ## and go through the full range, for best effect. This will inform the terrain
-## distributions.
+## distributions. See the class header for more information.
 ##
 ## An optional [param prob_config] may be supplied to alter default probability
 ## distributions.
@@ -190,7 +237,7 @@ func _get_terrain_layout(tile_data : TileData) -> Array[int]:
 ## Provide the [param tile] (source ID and atlas coords) and the [param layout].
 func _index_tile(tile : Vector3i, layout : Array) -> void:
 	if !_tiles.has(tile) && layout.size() > 0:
-		# Add to the collection of all tiles
+		# Add the tile and its layout to the collection of all tiles
 		_tiles[tile] = layout
 		
 		# Organize tiles by terrain
@@ -234,7 +281,7 @@ func _index_tile(tile : Vector3i, layout : Array) -> void:
 ## For each tile the weight will be calculated so:
 ## - Multi-terrain (edge) tiles have lower probability than single terrain tiles.
 ## - All tiles with the same layout have their probabilities divided by the amount of tiles in their layout group.
-## - Include weight from terrain set
+## - Weights are includded from the terrain set
 func _build_tile_weights() -> void:
 	var weights : Dictionary[Vector3i, float] = {}
 	for i : int in _terrain_layouts.size():
@@ -302,7 +349,7 @@ func _can_terrain_layouts_neighbor(a : Array, b : Array, dir : ComparisonDirecti
 		cells_b.push_back(b[(base_offset + 4 + i) % 8])
 	cells_b.reverse()
 	
-	# Make sure the edges match (or don't not match)
+	# Make sure the edges match (or, more accurately, don't not match)
 	for i in 3:
 		if cells_a[i] != cells_b[i]:
 			return false
@@ -316,7 +363,8 @@ func _can_terrain_layouts_neighbor(a : Array, b : Array, dir : ComparisonDirecti
 func _index_terrain_layout_neighbors() -> void:
 	var neighbors : Dictionary[int, Dictionary] = {}
 	
-	# Compare each layout edge to each other edge, and add layouts to the indices where they can neighbor
+	# Compare each layout edge to each other edge, and add layouts to the indices
+	# where they can neighbor
 	for i : int in _terrain_layouts.size():
 		neighbors[i] = {}
 		var a : Array = _terrain_layouts[i]
@@ -329,10 +377,11 @@ func _index_terrain_layout_neighbors() -> void:
 	
 	_layout_neighbors = neighbors
 
-## Find an optimally-efficient path through terrain types.
+## Find an optimally-efficient path through terrain edges.
 ##
-## This acts as a solver to the route inspection problem (Chinese postman problem.)
+## This uses a solver to the route inspection problem (Chinese postman problem.)
 func _find_terrain_sequence() -> void:
+	# Make a graph to hand into the solver
 	var graph : Dictionary[int, Dictionary] = {}
 	for edge : Vector2i in _terrain_edges:
 		var u : int = edge[0]
@@ -352,10 +401,12 @@ func _find_terrain_sequence() -> void:
 ## Build the terrain probability distribution, respecting sequencing.
 ##
 ## This is normalized between 0 and 1.
-## If a terrain appears multiple times, it will be adjusted to match the frequency of other terrains.
-## This applies terrain frequencies from the [WFCProbabilityConfiguration].
+## If a terrain appears multiple times, it will be adjusted to match the
+## frequency of other terrains. This applies terrain frequencies from the
+## [WFCProbabilityConfiguration].
 ##
-## X is the domain end (the highest) and Y is the terrain.
+## X is the maximum point on the domain a point applies to and Y is the terrain
+## index. The previous point's X value (or 0.0 on none) is used for the minimum.
 func _build_terrain_distribution() -> void:
 	var terrain_weights : Dictionary[int, float] = {}
 	var counts : Dictionary[int, int] = {}
@@ -377,7 +428,7 @@ func _build_terrain_distribution() -> void:
 		end += weight
 		distribution.push_back([end,terrain])
 	
-	# Set end of all domains to 1.0, to account for possible floating point errors
+	# Set end of the final domain to 1.0, to account for possible floating point errors
 	if distribution.size() > 0:
 		distribution[-1][0] = 1.0
 	
@@ -409,7 +460,7 @@ func _wait_on_debug_delay():
 
 ## Get the terrain index from the probability distribution belonging to x.
 ##
-## The [param x] parameters expects a value between 0 and 1.
+## The [param x] parameters expects a value between 0.0 and 1.0.
 ##
 ## Returns the terrain index or -1 on none found.
 func _get_terrain_by_distribution(x : float) -> int:
@@ -547,7 +598,8 @@ func _is_tile_placement_valid(grid : WFCGrid, coords : Vector2i, tile : Vector3i
 		if cell.get_status() == WFCCell.Status.OPEN:
 			continue
 		
-		# Get the layout for the neighboring tile and load the array of layouts which can neighbor it
+		# Get the layout for the neighboring tile and load the array of layouts
+		# which can neighbor it
 		var neighbor_tile : Vector3i = cell.get_tile()
 		var neighbor_layout : Array = _tiles[neighbor_tile]
 		var neighbor_layout_id : int = _terrain_layouts.find(neighbor_layout)
@@ -561,7 +613,8 @@ func _is_tile_placement_valid(grid : WFCGrid, coords : Vector2i, tile : Vector3i
 
 ## Calculate entropy for cell.
 ##
-## This calculates the Shannon entropy for a possibility space, saving it to the cell.
+## This calculates the Shannon entropy for a possibility space, saving it to the
+## cell. This also sets the count of possible tiles.
 func _calc_cell_entropy(grid : WFCGrid, coords : Vector2i) -> void:
 	var cell : WFCCell = grid.get_cell(coords.x, coords.y)
 	if !cell:
@@ -601,7 +654,8 @@ func _calc_cell_neighborhood_entropy(grid : WFCGrid, coords : Vector2i):
 
 ## Place tiles in grid cells based on noise.
 ##
-## This is intended to place cells, many of which will be invalid and will later be removed.
+## This is intended to place cells, many of which will be invalid and will later
+## be removed.
 func _place_default_tiles(rng : RandomNumberGenerator, grid : WFCGrid) -> void:
 	var dims : Vector2i = grid.get_dimensions()
 	for x : int in dims.x:
@@ -825,7 +879,7 @@ func set_debug_mode(debug_mode : bool) -> void:
 
 ## Set the amount of time between major actions, such as tile placements, when debugging.
 ##
-## The delay will likely sync to the nearest physics cycle above it in time.
+## The delay will likely sync to the nearest physics cycle.
 func set_debug_delay(delay : float) -> void:
 	_debug_delay = max(delay, 0.0)
 
@@ -835,8 +889,8 @@ func set_seed(prng_seed : int) -> void:
 
 ## Set the dimensions of the output grid.
 ##
-## Each cell represents a tile unit. Must be larger than the minimum size in
-## each dimension.
+## Each cell represents a tile unit. Must be larger than the minimum size
+## [code]MIN_SIZE[/code] in each dimension.
 func set_dimensions(width : int, height : int) -> void:
 	_dimensions = Vector2i(maxi(width, MIN_SIZE), maxi(height, MIN_SIZE))
 
@@ -849,15 +903,16 @@ func set_max_local_resets(max_local_resets : int) -> void:
 ## Run the noise-based wave function collapse (WFC) solver.
 ##
 ## This consists of several phases including:
-## 1. Using noise to set the initial tile state of the grid to solid-edged terrain
-##    tiles, based on the terrain distribution. This will result in invalid tile
-##    placements; this is intentional.
+## 1. Using noise to fill the grid with solid-edged terrain tiles, based on the
+##    terrain distribution. This will result in invalid tile placements; this
+##    is intentional.
 ## 2. Remove all tiles with invalid neighbor relationships. For example, a mud
 ##    tile edge touching a grass tile edge.
 ## 3. Calculate the entropy and possible tile counts for the open grid cells.
 ## 4. Run the wave function collapse solver until the grid has a fully-solved
 ##    grid, or runs out of attempts. Internally, this will reset groups of cells
-##    if there are no valid tiles for a space.
+##    if there are no valid tiles for a space. It will also manage updates to
+##    possibility spaces and entropy.
 ##
 ## Returns a [WFCGrid] with tiles placed in valid positions. Be sure to check
 ## the status of the [WFCGrid] to make sure the solver was successful.
@@ -872,7 +927,7 @@ func run() -> WFCGrid:
 		DebugSeverity.INFORMATION
 	)
 	
-	# Phase 1: Set grid cells to solid terrain tiles based on noise
+	# Phase 1: Set grid cells to solid-edge terrain tiles based on noise
 	_print_debug_message(
 		"Phase 1: Placing default tiles along generated noise.",
 		DebugSeverity.INFORMATION
@@ -880,7 +935,8 @@ func run() -> WFCGrid:
 	_place_default_tiles(rng, grid)
 	await _wait_on_debug_delay()
 	
-	# Phase 2: Invalidate then reset all cells that border tiles which they should not neighbor.
+	# Phase 2: Invalidate then reset all cells that border tiles which they
+	#          should not neighbor.
 	_print_debug_message(
 		"Phase 2: Removing all tiles with invalid neighbor relationships.",
 		DebugSeverity.INFORMATION
@@ -889,7 +945,8 @@ func run() -> WFCGrid:
 	await _wait_on_debug_delay()
 	_reset_invalid_cells(grid)
 	
-	# Phase 3: Calculate initial entropy scores and possible tiles for each open cells.
+	# Phase 3: Calculate initial entropy scores and possible tiles for each open
+	#          cell.
 	_print_debug_message(
 		"Phase 3: Calculate entropy and possible tiles for open cells.",
 		DebugSeverity.INFORMATION
@@ -897,7 +954,8 @@ func run() -> WFCGrid:
 	_calc_grid_entropy(grid)
 	await _wait_on_debug_delay()
 	
-	# Phase 4: Run wave function collapse, with local resets, until a full grid is found
+	# Phase 4: Run wave function collapse, with local resets, until a full grid
+	#          is found
 	_print_debug_message(
 		"Phase 4: Running wave function collapse process.",
 		DebugSeverity.INFORMATION
