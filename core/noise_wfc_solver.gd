@@ -77,6 +77,7 @@ const TERRAIN_LAYOUT_ORDER : Array[TileSet.CellNeighbor] = [
 
 var _debug_mode : bool = false ## Output debug messages and information.
 var _debug_delay : float = 0.0 ## Delay between tile placements and other major actions.
+var _last_defer : float = 0.0 ## Total time since last defer.
 var _seed : int = 0 ## The seed used in the pseudorandom number generator (PRNG).
 var _dimensions : Vector2i = Vector2i(MIN_SIZE, MIN_SIZE) ## The dimensions of the output grid.
 var _max_local_resets : int = 1000 ## The maximum number of local resets.
@@ -395,9 +396,17 @@ func _print_debug_message(message: String, severity : DebugSeverity) -> void:
 				print(message)
 
 ## Apply a debug delay when in debug mode.
+##
+## This will also defer processing to the main loop, if this is not in debug
+## mode.
 func _wait_on_debug_delay():
 	if _debug_mode && _debug_delay > 0.0:
 		await Engine.get_main_loop().create_timer(_debug_delay).timeout
+	else:
+		# Defer to the main loop every physics tick to prevent hanging
+		if (Time.get_ticks_msec() - _last_defer) > (1000.0 / Engine.physics_ticks_per_second):
+			_last_defer = Time.get_ticks_msec()
+			await Engine.get_main_loop().process_frame
 
 ## Get the terrain index from the probability distribution belonging to x.
 ##
