@@ -2,7 +2,8 @@ class_name NoiseWFCSolver extends Node
 ## Noise-based wave function collapse (WFC) solver.
 ##
 ## The initialization routine of the solver will extract terrain tile data from
-## a [TileSet], and use this to build relevant data structures and probabilities.
+## a [TileSet], and use this to build relevant tile data structures and
+## probabilities. Please note, alternative tiles are not supported.
 ## There are several expectations for the supplied tileset:
 ## 1. Tile shape shall be square.
 ## 2. A terrain set shall be supplied at index 0, with at least one valid terrain.
@@ -31,7 +32,6 @@ class_name NoiseWFCSolver extends Node
 ##
 ## To learn what happens when you run the solver, see the documentation for the
 ## [code]run()[/code] method.
-# TODO: Add safety to return to defer to core loop to prevent program freezing
 
 ## A signal for when a tile is placed.
 signal tile_placed(coords : Vector2i, source_id : int, atlas_coords : Vector2i)
@@ -152,7 +152,6 @@ func _load_tile_data() -> void:
 		if source is TileSetAtlasSource:
 			for j in range(source.get_tiles_count()):
 				var atlas_coords = source.get_tile_id(j)
-				# TODO: Add message this does not support alternate tiles
 				var tile_data: TileData = source.get_tile_data(atlas_coords, 0)
 				var layout : Array[int] = _get_terrain_layout(tile_data)
 				var tile : Vector3i = Vector3i(source_id, atlas_coords[0], atlas_coords[1])
