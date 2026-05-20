@@ -48,7 +48,7 @@ The overarching steps of my process are as follows:
    - A noise generator is input to establish the initial placements of the terrains
    - A probability configuration is input to establish the frequency of terrains and edge tiles
    - Tile data is processed so as to build a set of efficient indices for tiles, terrains, and terrain layouts, including grouping tiles by their terrain layouts
-   - Probability weights are established for each tile, taking into account terrain layouts, edge tiles, and the probability configuration; edge tiles are intended to have low probability of appearing
+   - Probability weights are established for each tile, taking into account terrain layouts, edge tiles, and the probability configuration
    - Indices are built for terrain layouts can neighbor what other terrain layouts
    - A route inspection (Chinese postman) problem solver is executed to find the most efficient sequence for all terrains
    - A terrain distribution is calculated from the most efficient sequence for all terrains, informed by the probability configuration; this maps all terrains between 0.0 and 1.0
