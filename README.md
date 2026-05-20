@@ -88,7 +88,7 @@ To run this project from the Godot editor, ensure you have [Godot 4.5 or later](
 Room for Improvement
 --------------------
 This project is a reasonable start or component for a more elaborate terrain generation system.
-It is noted that there are many imporvements that could be made, including but not limited to:
+It is noted that there are many improvements that could be made, including but not limited to:
 - Chunk-based generation, allowing terrain to be efficiently generated beyond a single grid; it would likely need to be informed by previous chunks to be consistent
 - Noise mixing and fading
 - Splitting main solver class into smaller components
