@@ -15,7 +15,7 @@ Animation
 Problem Framing
 ---------------
 The mission of this project started as a simple question:
-- How do I procedurally generate a collection of tiles for the terrain of a video game using simple 2D noise?
+- How do I procedurally generate a collection of tiles for the terrain of a video game using simple 2D noise, without manually mapping all tile probabilities?
 
 Several subsequent engineering challenges arose from this:
 - How do I turn a single floating point noise value into a terrain index that flows neatly between connected terrain?
@@ -82,7 +82,20 @@ Running Project
 ---------------
 To run this project from the Godot editor, ensure you have [Godot 4.5 or later](https://godotengine.org/). Import the project from within Godot. You can then Run Project from the play button in the upper-right of the editor.
 
+Room for Improvement
+--------------------
+This project is a reasonable start or component for a more elaborate terrain generation system.
+It is noted that there are many imporvements that could be made, including but not limited to:
+- Chunk-based generation, allowing terrain to be efficiently generated beyond a single grid; it would likely need to be informed by previous chunks to be consistent
+- Noise mixing and fading
+- Splitting main solver class into smaller components
+- Layering of multiple inter-connected tile sets
+- Data structure and memory optimizations
+- Speed optimizations
+- A multi-threading framework
+
 Project-Specific Definitions
 ----------------------------
 **Edge Tiles:** A tile used to form a connection between two or more terrains. These are necessary to interface terrains within the same tile set.
+
 **Terrain Layout:** An array containing the terrain indices of the 8-edge pieces of a tile or group of tiles. This defines its boundary interface to other tiles, as well as what tiles it is considered equivilent to.
