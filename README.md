@@ -68,7 +68,7 @@ The overarching steps of my process are as follows:
    - If a cell has no valid tiles and there are no valid "neighborhood resets" remaining, fail
 - Solution or Failure
    - If a solution is found, output the complete solution in the grid
-   - If the solver runs out of neighborhood resets and retries, and no solution is found, output an empty grid with the cause of failure
+   - If the solver runs out of neighborhood resets and no solution is found, output an empty grid with the cause of failure
 
 Tile Set Expectations
 ---------------------
