@@ -59,7 +59,7 @@ The overarching steps of my process are as follows:
 - Invalidate
    - Invalidate and remove all tiles that cannot be neighbors; this will be any terrain transition (edge)
 - Prepare
-   - Calculate the entropy and tile possibilities for each open grid space
+   - Calculate the entropy and tile possibilities for each open grid cell
 - Iterate Over Cell Queue
    - Retrieve the open grid cell with the lowest [Shannon entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory)) or, on conflict, the one that is closest to the center
    - Populate that grid cell with a random tile from its valid possibilities; possibilities are determined by observing its neighbors; weights are used to determine probabilities
