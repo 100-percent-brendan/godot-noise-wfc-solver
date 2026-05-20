@@ -7,9 +7,19 @@ While some components are similar, this is a complete reimagining and contains m
 
 As the project has been implemented in Godot using many built-in constructs, the solver can be used indirectly (or directly with a few minor improvements) to populate a production Godot tile map.
 
-Problem Being Solved
---------------------
+Problem Framing
+---------------
+The mission of this project started as a simple question:
+- How do I procedurally generate a collection of tiles for the terrain of a video game using 2D noise?
 
+Several subsequent engineering challenges arose from this:
+- How do I turn a single floating point noise value into a terrain value that flows neatly between terrains?
+- How do I make it feel hand crafted and purposeful?
+- How do I make sure the terrain is interesting?
+- How do I avoid eternal processing loops?
+
+Discoveries During Implementation
+---------------------------------
 
 Basic Steps
 -----------
