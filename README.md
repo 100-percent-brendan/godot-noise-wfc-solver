@@ -8,6 +8,10 @@ While some components are similar, this is a complete reimagining and contains m
 
 As the project has been implemented in Godot using many built-in constructs, the solver can be used indirectly (or directly with a few minor improvements) to populate a production Godot tile map.
 
+Animation
+---------
+**Place Animation Here**
+
 Problem Framing
 ---------------
 The mission of this project started as a simple question:
