@@ -94,8 +94,19 @@ It is noted that there are many imporvements that could be made, including but n
 - Speed optimizations
 - A multi-threading framework
 
+Artificial Limit
+----------------
+This wave function collapse implementation is artificially limited by its debug delay. To see it operate at close to full speed, comment out the debug delay in the test scene.
+
 Project-Specific Definitions
 ----------------------------
 **Edge Tiles:** A tile used to form a connection between two or more terrains. These are necessary to interface terrains within the same tile set.
 
 **Terrain Layout:** An array containing the terrain indices of the 8-edge pieces of a tile or group of tiles. This defines its boundary interface to other tiles, as well as what tiles it is considered equivilent to.
+
+Works That Informed or Inspired
+-------------------------------
+The following works helped inform the creation of this solution:
+- The primary basis of my WFC solver is the original [WaveFunctionCollapse](https://github.com/mxgmn/WaveFunctionCollapse) constraint solver by Maxim Gumin. His work is inspired by earlier works, such as Paul C. Merrell's Model Synthesis, which is further built on Texture Synthesis by Non-parametric Sampling by Alexei A. Efros and Thomas K. Leung. Please see Maxim Gumin's important work for further citations, as well as more information on the workings and basis for the WaveFunctionCollapse algorithm. Always remember, we stand on the shoulders of giants.
+- The video [Procedural Generation with Wave Function Collapse and Model Synthesis](https://www.youtube.com/watch?v=zIRTOgfsjl0) by DV Gen originally inspired me to consider using noise to inform tile placement.
+- The web pages on [Wang Tiles](https://www.boristhebrave.com/permanent/24/06/cr31/stagecast/wang/intro.html) and the [Blob Tileset](https://www.boristhebrave.com/permanent/24/06/cr31/stagecast/wang/blob.html) by Boris the Brave helped to flesh out the tiles I use in testing and procedural experimentation.
