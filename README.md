@@ -37,16 +37,28 @@ Basic Steps
 The overarching steps of my process are as follows:
 
 - Setup
-  - A tile set is input to establish what tiles, terrains, and terrain layouts are available
-  - A noise generator is input to establish the initial placements of the terrains
-  - A probability configuration is input to establish the frequency of terrains and edge tiles
-  - Tile data is processed so as to build a set of efficient indices for tiles, terrains, and terrain layouts, including grouping tiles by their terrain layouts
-  - Probability weights are established for each tile, taking into account terrain layouts, edge tiles, and the probability configuration; edge tiles are intended to have low probability of appearing
-  - Indices are built for terrain layouts can neighbor what other terrain layouts
-  - A route inspection (Chinese postman) problem solver is executed to find the most efficient sequence for all terrains
-  - A terrain distribution is calculated from the most efficient sequence for all terrains, informed by the probability configuration; this maps all terrains between 0.0 and 1.0.
-- 
-
+   - A tile set is input to establish what tiles, terrains, and terrain layouts are available
+   - A noise generator is input to establish the initial placements of the terrains
+   - A probability configuration is input to establish the frequency of terrains and edge tiles
+   - Tile data is processed so as to build a set of efficient indices for tiles, terrains, and terrain layouts, including grouping tiles by their terrain layouts
+   - Probability weights are established for each tile, taking into account terrain layouts, edge tiles, and the probability configuration; edge tiles are intended to have low probability of appearing
+   - Indices are built for terrain layouts can neighbor what other terrain layouts
+   - A route inspection (Chinese postman) problem solver is executed to find the most efficient sequence for all terrains
+   - A terrain distribution is calculated from the most efficient sequence for all terrains, informed by the probability configuration; this maps all terrains between 0.0 and 1.0
+- Initialize the Grid
+   - Setup an output grid, standing in for a tile map
+- Place Default Tiles
+   - Use noise generator to place default tiles on the grid; all tiles have uniform solid terrain layouts
+- Invalidate
+   - Invalidate and remove all tiles that cannot be neighbors; this will be any terrain transition (edge)
+- Prepare
+   - Calculate the entropy and tile possibilities for each open grid space
+- Iterate Over Cell Queue
+   - Retrieve the open grid cell with the lowest [Shannon entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory)) or, on conflict, the one that is closest to the center
+   - Populate that grid cell with a random tile from its valid possibilities; possibilities are determined by observing its neighbors; weights are used to determine probabilities
+   - Propogate changes to its neighbor cells, so they can recalculate entropy and the possibility space
+   - If a cell has no valid tiles and there are valid "neighborhood resets" remaining, clear a 2x2, 3x3, or 4x4 area around the cell, propogate changes, and reiterate
+   - 
 
 Tile Set Expectations
 ---------------------
