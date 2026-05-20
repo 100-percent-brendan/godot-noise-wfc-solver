@@ -12,8 +12,16 @@ Basic Steps
 
 - Setup
  - A tile set is input to establish what tiles, terrains, and terrain layouts are available
+ - A noise generator is input to establish the initial placements of the terrains
+ - A probability configuration is input to establish the frequency of terrains and edge tiles
+ - Tile data is processed so as to build a set of efficient indices for tiles, terrains, and terrain layouts, including grouping tiles by their terrain layouts
+ - Probability weights are established for each tile, taking into account terrain layouts, edge tiles, and the probability configuration; edge tiles are intended to have low probability of appearing
  - 
+
+Tile Set Expectations
+---------------------
 
 Project-Specific Definitions
 ----------------------------
+**Edge Tiles:** A tile used to form a connection between two or more terrains. These are necessary to interface terrains within the same tile set.
 **Terrain Layout:** An array containing the terrain indices of the 8-edge pieces of a tile or group of tiles. This defines its boundary interface to other tiles, as well as what tiles it is considered equivilent to.
