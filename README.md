@@ -57,8 +57,11 @@ The overarching steps of my process are as follows:
    - Retrieve the open grid cell with the lowest [Shannon entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory)) or, on conflict, the one that is closest to the center
    - Populate that grid cell with a random tile from its valid possibilities; possibilities are determined by observing its neighbors; weights are used to determine probabilities
    - Propogate changes to its neighbor cells, so they can recalculate entropy and the possibility space
-   - If a cell has no valid tiles and there are valid "neighborhood resets" remaining, clear a 2x2, 3x3, or 4x4 area around the cell, propogate changes, and reiterate
-   - 
+   - If a cell has no valid tiles and there are valid "neighborhood resets" remaining, clear a 3x3, 4x4, or 5x5 area around the cell, propogate changes, and reiterate
+   - If a cell has no valid tiles and there are no valid "neighborhood resets" remaining, fail
+- Solution or Failure
+   - If a solution is found, output the complete solution in the grid
+   - If the solver runs out of neighborhood resets and retries, and no solution is found, output an empty grid with the cause of failure
 
 Tile Set Expectations
 ---------------------
