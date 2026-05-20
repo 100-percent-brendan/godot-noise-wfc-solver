@@ -25,8 +25,8 @@ Discoveries During Implementation
 I made several discoveries during implementation of this solver including:
 1. A more minimalist tileset is prefered over the full blob tileset. While blob tilesets are useful for other terrain applications, I discovered that having too many possible edge tile options led to a lot of terrain garbage. Reducing the tile set led to a better effect.
 2. No one size fits all for noise. For any noise algorithm chosen, it is as much art as science, and should be tailored to the use case. Careful tuning of noise can lead to a more organic feeling.
-3. The problem of mapping a floating point number to a terrain index has an established solution. After carefully analyzing the issue, I discovered the problem can apply a concept from graph theory known as the route inspection (Chinese postman) problem. The notion is, that you want to explore all transitions (edges) between the terrains to find (or make) what is known as a Eulerian.
-   1. Alternatively, I had originally considered trying to find the Hamiltonian that included all terrains. Unlike a Eulerian which explores edges, a Hamiltonian explores all vertices (terrains). While this may work adaquately, it would leave some terrain transitions unexplored.
+3. The problem of mapping a floating point number to a terrain index has an established solution. After carefully analyzing the issue, I discovered the problem can apply a concept from graph theory known as the route inspection (Chinese postman) problem. The notion is, that you want to explore all transitions (edges) between the terrains to find (or make) what is known as a Eulerian. This is the most efficient path to explore all edges.
+   1. Alternatively, I had originally considered trying to build a solver to find the Hamiltonian that included all terrains. Unlike a Eulerian which explores edges, a Hamiltonian explores all vertices (terrains). While this may work adaquately, it would leave some terrain transitions unexplored.
 4. 
 
 Basic Steps
