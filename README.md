@@ -24,10 +24,12 @@ Discoveries During Implementation
 ---------------------------------
 I made several discoveries during implementation of this solver including:
 1. A more minimalist tileset is prefered over the full blob tileset. While blob tilesets are useful for other terrain applications, I discovered that having too many possible edge tile options led to a lot of terrain garbage. Reducing the tile set led to a better effect.
-2. No one size fits all for noise. For any noise algorithm chosen, it is as much art as science, and should be tailored to the use case. Careful tuning of noise can lead to a more organic feeling.
-3. The problem of mapping a floating point number to a terrain index has an established solution. After carefully analyzing the issue, I discovered the problem can apply a concept from graph theory known as the route inspection (Chinese postman) problem. The notion is, that you want to explore all transitions (edges) between the terrains to find (or make) what is known as a Eulerian. This is the most efficient path to explore all edges.
+2. No one size fits all for noise. For any noise algorithm chosen, it is as much art as science, and should be tailored to the use case. Careful tuning of noise can lead to a more organic feeling, as well.
+3. The problem of mapping a floating point number to a terrain index has an established solution. After carefully researching the issue, I discovered the problem can be solved using a concept from graph theory known as the route inspection (Chinese postman) problem. The notion is, that you want to explore all transitions (edges) between the terrains to find (or make) what is known as a Eulerian. This is the most efficient path to explore all edges.
    1. Alternatively, I had originally considered trying to build a solver to find the Hamiltonian that included all terrains. Unlike a Eulerian which explores edges, a Hamiltonian explores all vertices (terrains). While this may work adaquately, it would leave some terrain transitions unexplored.
-4. 
+4. By applying carefully curated noise, complete retries (restarts) are not (or are very rarely) required. Originally, I had considered applying retry logic. I discovered that with noise, however, it is largely unnecessary. In my implementation, local resets are used to prevent states where tile placement may get stuck.
+   1. I discovered it was possible to get some extreme forms of noise to get stuck or fail, but by applying some deterministic variability to the radius that resets occurred in, I was able to side-step this.
+5. 
 
 Basic Steps
 -----------
