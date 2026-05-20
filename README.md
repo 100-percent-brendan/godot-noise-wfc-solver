@@ -78,11 +78,9 @@ There are several expectations for the supplied tile set:
 6. There must be edge pieces between bordering terrains allowing placement in all cardinal directions. A very simple subset of the Wang set may be used.
 7. Terrains must logically flow such that no terrain is orphaned from the set. For example, water flows to mud flows to grass, but lava should not be on its own.
 
-Mapping Terrains to Noise
--------------------------
-
-Route Inspection Problem Solver
--------------------------------
+Running Project
+---------------
+To run this project from the Godot editor, ensure you have [Godot 4.5 or later](https://godotengine.org/). Import the project from within Godot. You can then Run Project from the play button in the upper-right of the editor.
 
 Project-Specific Definitions
 ----------------------------
