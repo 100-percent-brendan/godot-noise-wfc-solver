@@ -10,7 +10,7 @@ As the project has been implemented in Godot using many built-in constructs, the
 
 Animation
 ---------
-**Place Animation Here**
+<img width="400" height="225" alt="noise-based WFC solver" src="https://github.com/user-attachments/assets/bf70d3fe-bfdf-405b-8eac-12537a18a0a1" />
 
 Problem Framing
 ---------------
