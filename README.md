@@ -11,17 +11,22 @@ As the project has been implemented in Godot using many built-in constructs, the
 Problem Framing
 ---------------
 The mission of this project started as a simple question:
-- How do I procedurally generate a collection of tiles for the terrain of a video game using 2D noise?
+- How do I procedurally generate a collection of tiles for the terrain of a video game using simple 2D noise?
 
 Several subsequent engineering challenges arose from this:
-- How do I turn a single floating point noise value into a terrain value that flows neatly between terrains?
-- How do I make it feel hand crafted and purposeful?
+- How do I turn a single floating point noise value into a terrain index that flows neatly between connected terrain?
+- How do I make the terrain feel hand crafted and purposeful?
 - How do I make sure the terrain is interesting?
 - How do I avoid eternal processing loops?
 - How do I avoid garbage?
 
 Discoveries During Implementation
 ---------------------------------
+I made several discoveries during implementation of this solver including:
+1. A more minimalist tileset is prefered over the full blob tileset. While blob tilesets are useful for other terrain applications, I discovered that having too many possible edge tile options led to a lot of terrain garbage. Reducing the tile set led to a better effect.
+2. No one size fits all for noise. For any noise algorithm chosen, it is as much art as science, and should be tailored to the use case. Careful tuning of noise can lead to a more organic feeling.
+3. The problem of mapping a floating point number to a terrain index has an established solution. After carefully analyzing the issue, I discovered the problem can apply a concept from graph theory known as the route inspection (Chinese postman) problem. The notion is, that you want to explore all transitions between the terrains.
+ 1. Alternatively, I had originally considered trying to find the Hamiltonian that included all terrains. While this may work adaquately, it would leave some terrain transitions unexplored.
 
 Basic Steps
 -----------
