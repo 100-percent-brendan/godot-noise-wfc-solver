@@ -18,6 +18,7 @@ Several subsequent engineering challenges arose from this:
 - How do I make it feel hand crafted and purposeful?
 - How do I make sure the terrain is interesting?
 - How do I avoid eternal processing loops?
+- How do I avoid garbage?
 
 Discoveries During Implementation
 ---------------------------------
