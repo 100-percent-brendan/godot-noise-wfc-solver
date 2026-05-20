@@ -73,13 +73,13 @@ The overarching steps of my process are as follows:
 Tile Set Expectations
 ---------------------
 There are several expectations for the supplied tile set:
-1. Tile shape shall be square.
-2. A terrain set shall be supplied at index 0, with at least one valid terrain.
-3. The terrain mode shall be set to match corners and sides.
-4. Tiles shall contain terrain data on all edge places.
-5. Each tile shall be 1x1 in terms of unit size.
-6. There must be edge pieces between bordering terrains allowing placement in all cardinal directions. A very simple subset of the Wang set may be used.
-7. Terrains must logically flow such that no terrain is orphaned from the set. For example, water flows to mud flows to grass, but lava should not be on its own.
+1. Tile shape shall be square
+2. A terrain set shall be supplied at index 0, with at least one valid terrain
+3. The terrain mode shall be set to match corners and sides
+4. Tiles shall contain terrain data on all edge places
+5. Each tile shall be 1x1 in terms of unit size
+6. There must be edge pieces between bordering terrains allowing placement in all cardinal directions. A very simple subset of the Wang set may be used
+7. Terrains must logically flow such that no terrain is orphaned from the set. For example, water flows to mud flows to grass, but lava should not be on its own
 
 Running Project
 ---------------
