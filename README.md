@@ -44,7 +44,8 @@ The overarching steps of my process are as follows:
   - Probability weights are established for each tile, taking into account terrain layouts, edge tiles, and the probability configuration; edge tiles are intended to have low probability of appearing
   - Indices are built for terrain layouts can neighbor what other terrain layouts
   - A route inspection (Chinese postman) problem solver is executed to find the most efficient sequence for all terrains
-  - 
+  - A terrain distribution is calculated from the most efficient sequence for all terrains, informed by the probability configuration; this maps all terrains between 0.0 and 1.0.
+- 
 
 
 Tile Set Expectations
