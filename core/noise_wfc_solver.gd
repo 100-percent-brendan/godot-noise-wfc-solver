@@ -4,11 +4,11 @@ class_name NoiseWFCSolver extends Node
 ## The initialization routine of the solver will extract terrain tile data from
 ## a [TileSet], and use this to build relevant tile data structures and
 ## probabilities. Please note, alternative tiles are not supported.
-## There are several expectations for the supplied tileset:
+## There are several expectations for the supplied tile set:
 ## 1. Tile shape shall be square.
 ## 2. A terrain set shall be supplied at index 0, with at least one valid terrain.
 ## 3. The terrain mode shall be set to match corners and sides.
-## 4. Tiles shall contain terrain data on all edge points.
+## 4. Tiles shall contain terrain data on all edge places.
 ## 5. Each tile shall be 1x1 in terms of unit size.
 ## 6. There must be edge pieces between bordering terrains allowing placement
 ##    in all cardinal directions. A very simple subset of the Wang set may be
@@ -831,8 +831,8 @@ func _run_wfc_loop(rng : RandomNumberGenerator, grid : WFCGrid, local_resets : i
 				# To prevent this from getting stuck in loops
 				# Alternate how many tiles to remove
 				# By default, remove a radius of 1
-				# Increase to 2 and 3 on the 15th and 18th iterations
-				# Assuming this starts at a multiple of 20
+				# Increase to 2 and 3 on the 5th and 8th iterations
+				# Assuming this starts at a multiple of 10
 				if (resets_remaining % 10) == 5:
 					tile_removal_radius = 2
 				if (resets_remaining % 10) == 2:
