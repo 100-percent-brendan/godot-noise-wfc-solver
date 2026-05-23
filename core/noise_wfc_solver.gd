@@ -144,7 +144,7 @@ var _terrain_distribution : Array[Array] = []
 ##
 ## It is expected that within the [param tile_set] all tiles will be
 ## one-tile-by-one-tile in size. Only tiles with terrain mappings will be
-## used. Only the first terrain set encountered (terrain 0) will be used.
+## used. Only the first terrain set encountered (terrain set 0) will be used.
 ## See the class header for more expectations.
 ##
 ## The [param noise] can be set to any [Noise], but should have smooth transitions
@@ -295,7 +295,7 @@ func _build_tile_weights() -> void:
 		var tile_set_weights : Dictionary[Vector3i, float]
 		var total_tile_set_weight : float = 0.0
 		for tile : Vector3i in _layout_tiles[i]:
-			var source_id : int = _tile_set.get_source_id(tile.x)
+			var source_id : int = tile.x
 			var source: TileSetSource = _tile_set.get_source(source_id)
 			if source is TileSetAtlasSource:
 				var tile_data : TileData = source.get_tile_data(Vector2i(tile.y, tile.z), 0)
