@@ -53,14 +53,16 @@ func _run_solver() -> void:
 	prob_config.set_terrain_edge_weight(1.0 / 60.0)
 	
 	# Initialize the solver, along with the noise that powers it
+	var tile_set : TileSet = load("res://test/assets/terrain_alt.tres")
 	var noise : FastNoiseLite = load("res://test/assets/noise.tres").duplicate()
 	noise.seed = solver_seed
 	var solver : NoiseWFCSolver ## The solver used for debugging.
-	solver = NoiseWFCSolver.new(load("res://test/assets/terrain.tres"), noise, prob_config)
+	solver = NoiseWFCSolver.new(tile_set, noise, prob_config)
 	solver.set_seed(solver_seed)
 	solver.set_debug_mode(true)
 	solver.set_debug_delay(0.0)
 	solver.set_dimensions(GRID_WIDTH, GRID_HEIGHT)
+	tile_map_layer.tile_set = tile_set
 	
 	# Bind rendering signals
 	solver.tile_placed.connect(_on_tile_placed)
