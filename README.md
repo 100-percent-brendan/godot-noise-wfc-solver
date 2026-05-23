@@ -3,19 +3,22 @@ Noise-Based Wave Function Collapse Solver
 This simple tiled model wave function collapse (WFC) solver uses a noise function to inform the initial placement of tiles.
 This governs the overall shape of the terrain.
 
-This method was devised as an improvement to one of my earlier [implementations of wave function collapse](https://github.com/100-percent-brendan/godot-stm-wfc-solver/tree/main) algorithm.
-While some components are similar, this is a complete reimagining and contains many fundemental improvements over the original.
+This method was devised as an improvement to one of my earlier [implementations of the wave function collapse algorithm](https://github.com/100-percent-brendan/godot-stm-wfc-solver/tree/main).
+While some components are similar, this is largely a reimagining and contains many improvements over the original.
 
 As the project has been implemented in Godot using many built-in constructs, the solver can be used indirectly (or directly with a few minor improvements) to populate a production Godot tile map.
 
 Animation
 ---------
-**Place Animation Here**
+<img width="400" height="225" alt="noise-based WFC solver" src="https://github.com/user-attachments/assets/bf70d3fe-bfdf-405b-8eac-12537a18a0a1" />
+
+The animation above is slowed down to make viewing possible.
+In many cases, the logic may happen within a single frame time.
 
 Problem Framing
 ---------------
 The mission of this project started as a simple question:
-- How do I procedurally generate a collection of tiles for the terrain of a video game using simple 2D noise?
+- How do I procedurally generate a collection of tiles for the terrain of a video game using simple 2D noise, without manually mapping all tile probabilities?
 
 Several subsequent engineering challenges arose from this:
 - How do I turn a single floating point noise value into a terrain index that flows neatly between connected terrain?
@@ -27,13 +30,13 @@ Several subsequent engineering challenges arose from this:
 Discoveries During Implementation
 ---------------------------------
 I made several discoveries during implementation of this solver including:
-1. A more minimalist tileset is prefered over the full blob tileset. While blob tilesets are useful for other terrain applications, I discovered that having too many possible edge tile options led to a lot of terrain garbage. Reducing the tile set led to a better effect.
-2. No one size fits all for noise. For any noise algorithm chosen, it is as much art as science, and should be tailored to the use case. Careful tuning of noise can lead to a more organic feeling, as well.
-3. The problem of mapping a floating point number to a terrain index has an established solution. After carefully researching the issue, I discovered the problem can be solved using a concept from graph theory known as the route inspection (Chinese postman) problem. The notion is, that you want to explore all transitions (edges) between the terrains to find (or make) what is known as a Eulerian. This is the most efficient path to explore all edges.
-   1. Alternatively, I had originally considered trying to build a solver to find the Hamiltonian that included all terrains. Unlike a Eulerian which explores edges, a Hamiltonian explores all vertices (terrains). While this may work adaquately, it would leave some terrain transitions unexplored.
+1. A minimalist tileset is prefered over the full blob tileset. While blob tilesets are useful for other terrain applications, I discovered that having too many possible edge tile options led to a lot of terrain garbage. Reducing the tile set led to a better effect.
+2. No one size fits all for noise. For any noise algorithm chosen, it is as much art as science, and should be tailored to the use case and the tile set being used. Careful tuning of noise can lead to a more organic feeling, as well.
+3. The problem of mapping a floating point number to a terrain index has an established solution. After carefully researching the issue, I discovered the problem can be solved using a concept from graph theory known as the route inspection (Chinese postman) problem. The notion is, that you want to explore all transitions (edges) between the terrains to find (or make) what is known as an Eulerian. This is the most efficient path to explore all edges.
+   1. Alternatively, I had originally considered trying to build a solver to find the Hamiltonian that included all terrains. Unlike an Eulerian which explores edges, a Hamiltonian explores all vertices (terrains). While this may work adaquately, it would leave some terrain transitions unexplored.
 4. By applying carefully curated noise, complete retries (restarts) are not (or are very rarely) required. Originally, I had considered applying retry logic. I discovered that with noise, however, it is largely unnecessary. In my implementation, local resets are used to prevent states where tile placement may get stuck.
-   1. I found it was possible to get some extreme forms of noise to get stuck or fail, but by applying some deterministic variability to the radius that resets occurred in, I was able to side-step this.
-5. By using noise to collapse the initial placement of tiles, I was able to speed up the process of finding a complete tile map by a substantial amount.
+   1. I found it wa still possible to get stuck when using some extreme forms of noise, but by applying some deterministic variability to the radius that resets occurred in, I was able to side-step this.
+5. By using noise to collapse the initial placement of tiles, I was able to speed up the process of finding a complete tile map by a noticeable amount.
 
 Basic Steps
 -----------
@@ -45,8 +48,8 @@ The overarching steps of my process are as follows:
    - A noise generator is input to establish the initial placements of the terrains
    - A probability configuration is input to establish the frequency of terrains and edge tiles
    - Tile data is processed so as to build a set of efficient indices for tiles, terrains, and terrain layouts, including grouping tiles by their terrain layouts
-   - Probability weights are established for each tile, taking into account terrain layouts, edge tiles, and the probability configuration; edge tiles are intended to have low probability of appearing
-   - Indices are built for terrain layouts can neighbor what other terrain layouts
+   - Probability weights are established for each tile, taking into account terrain layouts, edge tiles, and the probability configuration
+   - Indices are built to determine what terrain layouts can neighbor what other terrain layouts
    - A route inspection (Chinese postman) problem solver is executed to find the most efficient sequence for all terrains
    - A terrain distribution is calculated from the most efficient sequence for all terrains, informed by the probability configuration; this maps all terrains between 0.0 and 1.0
 - Initialize the Grid
@@ -56,7 +59,7 @@ The overarching steps of my process are as follows:
 - Invalidate
    - Invalidate and remove all tiles that cannot be neighbors; this will be any terrain transition (edge)
 - Prepare
-   - Calculate the entropy and tile possibilities for each open grid space
+   - Calculate the entropy and tile possibilities for each open grid cell
 - Iterate Over Cell Queue
    - Retrieve the open grid cell with the lowest [Shannon entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory)) or, on conflict, the one that is closest to the center
    - Populate that grid cell with a random tile from its valid possibilities; possibilities are determined by observing its neighbors; weights are used to determine probabilities
@@ -65,26 +68,51 @@ The overarching steps of my process are as follows:
    - If a cell has no valid tiles and there are no valid "neighborhood resets" remaining, fail
 - Solution or Failure
    - If a solution is found, output the complete solution in the grid
-   - If the solver runs out of neighborhood resets and retries, and no solution is found, output an empty grid with the cause of failure
+   - If the solver runs out of neighborhood resets and no solution is found, output an empty grid with the cause of failure
 
 Tile Set Expectations
 ---------------------
 There are several expectations for the supplied tile set:
-1. Tile shape shall be square.
-2. A terrain set shall be supplied at index 0, with at least one valid terrain.
-3. The terrain mode shall be set to match corners and sides.
-4. Tiles shall contain terrain data on all edge places.
-5. Each tile shall be 1x1 in terms of unit size.
-6. There must be edge pieces between bordering terrains allowing placement in all cardinal directions. A very simple subset of the Wang set may be used.
-7. Terrains must logically flow such that no terrain is orphaned from the set. For example, water flows to mud flows to grass, but lava should not be on its own.
+1. Tile shape shall be square
+2. A terrain set shall be supplied at index 0, with at least one valid terrain
+3. The terrain mode shall be set to match corners and sides
+4. Tiles shall contain terrain data on all edge places
+5. Each tile shall be 1x1 in terms of unit size
+6. There must be edge pieces between bordering terrains allowing placement in all cardinal directions. A very simple subset of the Wang set may be used
+7. Terrains must logically flow such that no terrain is orphaned from the set. For example, water flows to mud flows to grass, but lava should not be on its own
 
-Mapping Terrains to Noise
--------------------------
+Running Project
+---------------
+To run this project from the Godot editor, ensure you have [Godot 4.5 or later](https://godotengine.org/). Import the project from within Godot. You can then Run Project from the play button in the upper-right of the editor.
 
-Route Inspection Problem Solver
--------------------------------
+Room for Improvement
+--------------------
+This project is a reasonable start or component for a more elaborate terrain generation system.
+It is noted that there are many improvements that could be made, including but not limited to:
+- Chunk-based generation, allowing terrain to be efficiently generated beyond a single grid; it would likely need to be informed by previous chunks to be consistent
+- Noise mixing and fading
+- Splitting main solver class into smaller components
+- Layering of multiple inter-connected tile sets
+- Data structure and memory optimizations
+- Speed optimizations
+- A multi-threading framework
+
+Artificial Limit
+----------------
+This wave function collapse implementation is artificially limited by its debug delay. To see it operate at close to full speed, comment out the debug delay in the test scene.
 
 Project-Specific Definitions
 ----------------------------
 **Edge Tiles:** A tile used to form a connection between two or more terrains. These are necessary to interface terrains within the same tile set.
+
 **Terrain Layout:** An array containing the terrain indices of the 8-edge pieces of a tile or group of tiles. This defines its boundary interface to other tiles, as well as what tiles it is considered equivilent to.
+
+Works That Informed or Inspired
+-------------------------------
+The following works played an important part in informing and inspiring the creation of this solution:
+- The primary basis of my WFC solver is the original [WaveFunctionCollapse](https://github.com/mxgmn/WaveFunctionCollapse) constraint solver by Maxim Gumin. His work is inspired by earlier works, such as Paul C. Merrell's Model Synthesis, which is further built on Texture Synthesis by Non-parametric Sampling by Alexei A. Efros and Thomas K. Leung. Please see Maxim Gumin's important work for further citations, as well as more information on the workings and basis for the WaveFunctionCollapse algorithm.
+- The video [Procedural Generation with Wave Function Collapse and Model Synthesis](https://www.youtube.com/watch?v=zIRTOgfsjl0) by DV Gen originally inspired me to consider using noise to inform tile placement.
+- The web pages on [Wang Tiles](https://www.boristhebrave.com/permanent/24/06/cr31/stagecast/wang/intro.html) and the [Blob Tileset](https://www.boristhebrave.com/permanent/24/06/cr31/stagecast/wang/blob.html) by Boris the Brave helped to flesh out the tiles I use in testing and procedural experimentation.
+- The many works by Meigu Guan, but most notably ["On the windy postman problem"](https://www.sciencedirect.com/science/article/pii/0166218X84900891?via%3Dihub), which supplies core logic for solving the route inspection (Chinese postman) problem.
+
+There are so many others, that go beyond numerating: Always remember, we stand on the shoulders of giants.
