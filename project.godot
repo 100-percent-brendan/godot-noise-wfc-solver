@@ -14,6 +14,7 @@ config/name="Noise-Based Wave Function Collapse Solver"
 run/main_scene="uid://1joa7cbh0a0"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+config/tags=PackedStringArray("noise", "route_inspection", "solver", "wfc")
 
 [display]
 
